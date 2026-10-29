@@ -15,11 +15,13 @@
   :root {
     --azul: #1F4E8C; --azul-medio: #CDDEF3; --azul-claro: #ECF3FB;
     --verde: #1E7A46; --verde-medio: #CBEAD5; --verde-claro: #EBF7EF;
+    --violeta: #5B2C83; --violeta-medio: #E2D3F0; --violeta-claro: #F5EFFA;
     --rojo: #B22222; --naranja: #C46A00; --ok: #1E7A46; --gris: #6B7280;
     --texto: #1A1A1A; --borde: #D5DBE3; --blanco: #FFFFFF;
     --color: var(--azul); --medio: var(--azul-medio); --claro: var(--azul-claro);
   }
   body.cheque { --color: var(--verde); --medio: var(--verde-medio); --claro: var(--verde-claro); }
+  body.arca { --color: var(--violeta); --medio: var(--violeta-medio); --claro: var(--violeta-claro); }
   * { box-sizing: border-box; }
   html, body { margin: 0; }
   body {
@@ -38,10 +40,11 @@
   .btn-guardados { background: rgba(255,255,255,.18); color: #fff; border: 0; border-radius: 18px; padding: 7px 12px; font-size: 14px; font-weight: 600; }
   .solapas { display: flex; margin-top: 10px; gap: 6px; }
   .solapa {
-    flex: 1; border: 0; padding: 11px 6px; font-size: 15px; border-radius: 10px 10px 0 0; font-weight: 600; cursor: pointer;
+    flex: 1; border: 0; padding: 11px 4px; font-size: 14px; border-radius: 10px 10px 0 0; font-weight: 600; cursor: pointer;
   }
   .solapa.cuit { background: var(--azul-medio); color: var(--azul); }
   .solapa.cheq { background: var(--verde-medio); color: var(--verde); }
+  .solapa.arca { background: var(--violeta-medio); color: var(--violeta); }
   .solapa.activa { background: var(--claro); }
   body:not(.cheque) .solapa.cuit.activa { color: var(--azul); }
   main { padding: 14px 16px 40px; max-width: 720px; margin: 0 auto; }
@@ -124,6 +127,24 @@
   .actualizar { display: block; width: 100%; border: 0; text-align: left; background: #FFF4D6; color: #7A4B00; border: 1.5px solid #F0C36A; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; font-size: 15px; font-weight: 700; cursor: pointer; }
   .actualizar[hidden] { display: none; }
   .actualizar small { display: block; font-weight: 500; font-size: 13px; margin-top: 2px; }
+  /* Solapa ARCA */
+  .resultado.arca h2 { color: var(--violeta); }
+  .datos { margin-top: 6px; }
+  .dato { display: flex; gap: 10px; border-top: 1px solid #eef0f3; padding: 7px 0; font-size: 14px; }
+  .dato .et { color: var(--gris); width: 38%; flex-shrink: 0; }
+  .dato .va { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+  .seccion.arca { color: var(--violeta); }
+  .ejemplo { background: #FFF4D6; color: #7A4B00; border-radius: 10px; padding: 8px 10px; font-weight: 800; font-size: 14px; margin-bottom: 8px; text-align: center; }
+  details.crudo { margin-top: 14px; font-size: 13px; }
+  details.crudo summary { color: var(--violeta); font-weight: 700; cursor: pointer; }
+  details.crudo .dato { font-size: 12px; }
+  .pasos { margin: 8px 0 0; padding-left: 20px; font-size: 14px; line-height: 1.45; }
+  .pasos li { margin-bottom: 6px; }
+  .paso-t { font-weight: 800; color: var(--violeta); margin-top: 14px; font-size: 15px; }
+  .paso-t:first-child { margin-top: 0; }
+  .paso-t.hecho { color: var(--ok); }
+  .btn.chico { padding: 9px 12px; font-size: 14px; }
+  .cert-ok { color: var(--ok); font-weight: 700; font-size: 14px; }
   .aviso { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #222; color: #fff; padding: 10px 16px; border-radius: 20px; font-size: 14px; z-index: 60; opacity: 0; transition: opacity .2s; pointer-events: none; }
   .aviso.ver { opacity: .92; }
 
@@ -145,8 +166,9 @@
     <button class="btn-guardados" id="btnGuardados">★ Guardados</button>
   </div>
   <div class="solapas">
-    <button class="solapa cuit activa" id="solCuit">Informe por CUIT</button>
-    <button class="solapa cheq" id="solCheq">Cheques denunciados</button>
+    <button class="solapa cuit activa" id="solCuit">Informe BCRA</button>
+    <button class="solapa cheq" id="solCheq">Cheques</button>
+    <button class="solapa arca" id="solArca">Datos ARCA</button>
   </div>
 </header>
 
@@ -188,6 +210,18 @@
     </div>
     <div id="resCheq"></div>
   </section>
+
+  <!-- Solapa ARCA (constancia de inscripción) -->
+  <section id="pagArca" hidden>
+    <div class="tarjeta no-imprimir">
+      <label class="campo" for="cuitArca">CUIT / CUIL a consultar en ARCA</label>
+      <input type="text" id="cuitArca" inputmode="numeric" autocomplete="off" placeholder="Ej: 20-12345678-9">
+      <div class="ayuda">Trae los datos de la constancia de inscripción: nombre, domicilio fiscal, actividades, impuestos y monotributo.</div>
+      <button class="btn principal" id="btnArca">Consultar en ARCA</button>
+    </div>
+    <div id="resArca"></div>
+    <div class="tarjeta no-imprimir" id="arcaConfig"></div>
+  </section>
   <p class="pie no-imprimir" style="text-align:center">Datos: API oficial del BCRA ·
     <a href="https://github.com/afelixc/consulta-cuit-bcra/releases/latest/download/Consulta-CUIT-BCRA-PC.zip" target="_blank">Descargar el programa para PC</a><br>
     Creada por AFC · Uso libre y sin fines de lucro</p>
@@ -209,6 +243,7 @@
 
 <script src="lib/html2canvas.min.js"></script>
 <script src="lib/jspdf.umd.min.js"></script>
+<script src="lib/forge.min.js"></script>
 <script>
 'use strict';
 const API = 'https://api.bcra.gob.ar';
@@ -275,17 +310,22 @@ function aviso(t) { const a = $('aviso'); a.textContent = t; a.classList.add('ve
 
 // ---------- Solapas ----------
 function irA(cual) {
-  const cheque = cual === 'cheque';
+  const cheque = cual === 'cheque', arca = cual === 'arca';
   document.body.classList.toggle('cheque', cheque);
-  $('solCuit').classList.toggle('activa', !cheque);
+  document.body.classList.toggle('arca', arca);
+  $('solCuit').classList.toggle('activa', cual === 'cuit');
   $('solCheq').classList.toggle('activa', cheque);
-  $('pagCuit').hidden = cheque;
+  $('solArca').classList.toggle('activa', arca);
+  $('pagCuit').hidden = cual !== 'cuit';
   $('pagCheq').hidden = !cheque;
-  document.querySelector('meta[name=theme-color]').content = cheque ? '#1E7A46' : '#1F4E8C';
+  $('pagArca').hidden = !arca;
+  document.querySelector('meta[name=theme-color]').content = cheque ? '#1E7A46' : arca ? '#5B2C83' : '#1F4E8C';
   if (cheque) cargarBancos();
+  if (arca) pintarConfigArca();
 }
 $('solCuit').onclick = () => irA('cuit');
 $('solCheq').onclick = () => irA('cheque');
+$('solArca').onclick = () => irA('arca');
 
 // ---------- Informe por CUIT ----------
 let ultCuit = null;   // último informe (para guardar / compartir)
@@ -601,6 +641,320 @@ async function hacerPdf(titulo, boton) {
     boton.disabled = false;
   }
 }
+
+// ---------- ARCA: constancia de inscripción ----------
+// Usa el web service oficial de ARCA (ws_sr_constancia_inscripcion) con el certificado digital del usuario.
+// La clave privada se genera y queda solo en este teléfono; el certificado lo emite ARCA a partir del pedido (CSR).
+const ARCA = {
+  wsaa: 'https://wsaa.afip.gov.ar/ws/services/LoginCms',
+  padron: 'https://aws.afip.gov.ar/sr-padron/webservices/personaServiceA5',
+  servicio: 'ws_sr_constancia_inscripcion',
+  alias: 'consultacuit'
+};
+let arcaCfg = almacen.leer('arca', {});      // { cuit, clave, pedido, cert, ta: { token, sign, vence } }
+const grabarArca = () => almacen.escribir('arca', arcaCfg);
+
+// Datos del certificado cargado (CUIT y vencimiento)
+function infoCert() {
+  try {
+    const c = forge.pki.certificateFromPem(arcaCfg.cert);
+    return { vence: c.validity.notAfter, sujeto: c.subject.attributes.map(a => `${a.shortName || a.name}=${a.value}`).join(', ') };
+  } catch { return null; }
+}
+
+function pintarConfigArca() {
+  const caja = $('arcaConfig');
+  const ic = arcaCfg.cert && infoCert();
+  if (ic) {
+    const dias = Math.floor((ic.vence - Date.now()) / 864e5);
+    caja.innerHTML = `<div class="cert-ok">✔ Certificado de ARCA cargado (CUIT ${esc(fmtCuit(arcaCfg.cuit))})</div>
+      <div class="sub ${dias < 30 ? 'rojo' : ''}">Vence el ${ic.vence.toLocaleDateString('es-AR')}${dias < 30 ? ` · ¡faltan ${Math.max(dias, 0)} días! Hay que renovarlo` : ''}</div>
+      <div class="acciones"><button class="btn sec chico" id="arcaEjemplo">Ver un ejemplo</button><button class="btn sec chico" id="arcaRehacer">Cambiar certificado</button></div>`;
+    $('arcaRehacer').onclick = () => { if (confirm('¿Borrar el certificado cargado y armar uno nuevo?')) { arcaCfg = {}; grabarArca(); pintarConfigArca(); } };
+  } else if (!arcaCfg.clave) {
+    caja.innerHTML = `<div class="paso-t">Configurar ARCA (una sola vez)</div>
+      <div class="ayuda" style="margin-top:4px">Para consultar ARCA hace falta tu certificado digital (es gratis). Se hace en 3 pasos y no se vuelve a pedir por 2 años.</div>
+      <div class="paso-t">Paso 1 · Generar el pedido</div>
+      <label class="campo" for="arcaMiCuit">Tu CUIT <span>(el de tu clave fiscal)</span></label>
+      <input type="text" id="arcaMiCuit" inputmode="numeric" autocomplete="off" placeholder="Ej: 20-12345678-9">
+      <button class="btn principal" id="arcaGenerar">Generar pedido de certificado</button>
+      <div class="acciones"><button class="btn sec chico" id="arcaEjemplo">Ver un ejemplo de cómo sale</button></div>`;
+    $('arcaGenerar').onclick = generarPedidoArca;
+  } else {
+    caja.innerHTML = `<div class="paso-t hecho">✔ Paso 1 · Pedido generado (CUIT ${esc(fmtCuit(arcaCfg.cuit))})</div>
+      <div class="acciones"><button class="btn sec chico" id="arcaPedido">Guardar / enviar el pedido</button></div>
+      <div class="paso-t">Paso 2 · En la página de ARCA (con clave fiscal)</div>
+      <ol class="pasos">
+        <li>Entrá a <b>arca.gob.ar</b> con tu CUIT y clave fiscal (nivel 3).</li>
+        <li>Abrí <b>Administración de Certificados Digitales</b>. Si no lo tenés, agregalo desde <b>Administrador de Relaciones de Clave Fiscal → Adherir servicio → ARCA → Servicios interactivos</b>.</li>
+        <li>Tocá <b>Agregar alias</b>, escribí <b>${ARCA.alias}</b>, elegí el archivo <b>pedido-certificado-arca.csr</b> y confirmá.</li>
+        <li>Tocá <b>Ver</b> en el alias ${ARCA.alias} y <b>descargá el certificado</b> (archivo .crt).</li>
+        <li>Volvé a <b>Administrador de Relaciones de Clave Fiscal → Nueva relación → Buscar → ARCA → WebServices</b> y elegí <b>Consulta de constancia de inscripción</b> (ws_sr_constancia_inscripcion).</li>
+        <li>En <b>Representante</b> tocá Buscar, elegí el certificado <b>${ARCA.alias}</b> y confirmá.</li>
+      </ol>
+      <div class="paso-t">Paso 3 · Cargar el certificado acá</div>
+      <button class="btn principal" id="arcaCargar">Elegir el archivo .crt descargado</button>
+      <input type="file" id="arcaArchivo" hidden>
+      <div class="acciones"><button class="btn sec chico" id="arcaEjemplo">Ver un ejemplo</button><button class="btn sec chico" id="arcaRehacer">Empezar de nuevo</button></div>`;
+    $('arcaPedido').onclick = enviarPedidoArca;
+    $('arcaCargar').onclick = () => $('arcaArchivo').click();
+    $('arcaArchivo').onchange = cargarCertArca;
+    $('arcaRehacer').onclick = () => { if (confirm('¿Borrar el pedido y empezar de nuevo?')) { arcaCfg = {}; grabarArca(); pintarConfigArca(); } };
+  }
+  $('arcaEjemplo').onclick = () => mostrarArca(xmlEjemploArca(), '20123456786', true);
+}
+
+async function generarPedidoArca() {
+  const cuit = $('arcaMiCuit').value.replace(/\D/g, '');
+  if (!cuitValido(cuit)) { aviso('Revisá tu CUIT'); $('arcaMiCuit').focus(); return; }
+  const b = $('arcaGenerar');
+  b.disabled = true; b.textContent = 'Generando… (puede tardar unos segundos)';
+  try {
+    let privada, publica;
+    try {
+      // Rápido: lo hace el propio teléfono
+      const par = await crypto.subtle.generateKey({ name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' }, true, ['sign', 'verify']);
+      const pkcs8 = await crypto.subtle.exportKey('pkcs8', par.privateKey);
+      privada = forge.pki.privateKeyFromAsn1(forge.asn1.fromDer(forge.util.binary.raw.encode(new Uint8Array(pkcs8))));
+      publica = forge.pki.setRsaPublicKey(privada.n, privada.e);
+    } catch {
+      const par = await new Promise((ok, mal) => forge.pki.rsa.generateKeyPair({ bits: 2048, e: 0x10001 }, (e, k) => e ? mal(e) : ok(k)));
+      privada = par.privateKey; publica = par.publicKey;
+    }
+    const csr = forge.pki.createCertificationRequest();
+    csr.publicKey = publica;
+    csr.setSubject([{ shortName: 'C', value: 'AR' }, { shortName: 'O', value: 'Consulta CUIT' }, { shortName: 'CN', value: ARCA.alias }, { name: 'serialNumber', value: 'CUIT ' + cuit }]);
+    csr.sign(privada, forge.md.sha256.create());
+    arcaCfg = { cuit, clave: forge.pki.privateKeyToPem(privada), pedido: forge.pki.certificationRequestToPem(csr) };
+    grabarArca();
+    pintarConfigArca();
+    enviarPedidoArca();
+  } catch (e) {
+    aviso('No se pudo generar el pedido');
+    b.disabled = false; b.textContent = 'Generar pedido de certificado';
+  }
+}
+
+// El pedido (.csr) se comparte para subirlo a ARCA: Drive, mail, WhatsApp, Archivos…
+async function enviarPedidoArca() {
+  const archivo = 'pedido-certificado-arca.csr';
+  try {
+    if (nativo.Filesystem && nativo.Share) {
+      const { uri } = await nativo.Filesystem.writeFile({ path: archivo, data: arcaCfg.pedido, directory: 'CACHE', encoding: 'utf8' });
+      await nativo.Share.share({ title: archivo, files: [uri], dialogTitle: 'Guardá el pedido (Drive, mail, Archivos…)' });
+    } else {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([arcaCfg.pedido], { type: 'application/pkcs10' }));
+      a.download = archivo; a.click();
+    }
+  } catch {}
+}
+
+async function cargarCertArca(ev) {
+  const f = ev.target.files?.[0];
+  ev.target.value = '';
+  if (!f) return;
+  try {
+    const bytes = new Uint8Array(await f.arrayBuffer());
+    const texto = new TextDecoder().decode(bytes);
+    const cert = /BEGIN CERTIFICATE/.test(texto) ? forge.pki.certificateFromPem(texto)
+      : forge.pki.certificateFromAsn1(forge.asn1.fromDer(forge.util.binary.raw.encode(bytes)));
+    const privada = forge.pki.privateKeyFromPem(arcaCfg.clave);
+    if (cert.publicKey.n.compareTo(privada.n) !== 0) {
+      alert('Ese certificado no corresponde al pedido generado en este teléfono.\n\nFijate de descargar el certificado del alias "' + ARCA.alias + '" que creaste con el pedido de esta app.');
+      return;
+    }
+    arcaCfg.cert = forge.pki.certificateToPem(cert);
+    delete arcaCfg.ta;
+    grabarArca();
+    pintarConfigArca();
+    aviso('Certificado cargado ✔');
+  } catch {
+    alert('No se pudo leer el archivo. Tiene que ser el certificado (.crt) que descargaste de ARCA.');
+  }
+}
+
+// Envío SOAP por la vía nativa de Android (ARCA no permite consultas desde el navegador)
+async function soap(url, cuerpo) {
+  const http = nativo.CapacitorHttp;
+  if (!http) throw new Error('Esta consulta funciona solo dentro de la app del teléfono.');
+  const r = await http.request({ url, method: 'POST', headers: { 'Content-Type': 'text/xml; charset=utf-8', SOAPAction: '' }, data: cuerpo, responseType: 'text', connectTimeout: 20000, readTimeout: 30000 });
+  const doc = new DOMParser().parseFromString(String(r.data ?? ''), 'text/xml');
+  const falla = doc.getElementsByTagName('faultstring')[0]?.textContent;
+  if (falla) throw new Error(falla);
+  if (r.status < 200 || r.status >= 300) throw new Error(`ARCA respondió con error ${r.status}`);
+  return doc;
+}
+
+const horaArg = ms => new Date(ms - 3 * 3600e3).toISOString().slice(0, 19) + '-03:00';
+
+// Pide a ARCA el permiso de acceso (dura 12 horas y se reutiliza)
+async function ticketArca() {
+  if (arcaCfg.ta && arcaCfg.ta.vence - Date.now() > 5 * 60e3) return arcaCfg.ta;
+  const ahoraMs = Date.now();
+  const tra = `<?xml version="1.0" encoding="UTF-8"?><loginTicketRequest version="1.0"><header><uniqueId>${Math.floor(ahoraMs / 1000)}</uniqueId>` +
+    `<generationTime>${horaArg(ahoraMs - 10 * 60e3)}</generationTime><expirationTime>${horaArg(ahoraMs + 10 * 60e3)}</expirationTime></header><service>${ARCA.servicio}</service></loginTicketRequest>`;
+  const cert = forge.pki.certificateFromPem(arcaCfg.cert);
+  const p7 = forge.pkcs7.createSignedData();
+  p7.content = forge.util.createBuffer(tra, 'utf8');
+  p7.addCertificate(cert);
+  p7.addSigner({ key: forge.pki.privateKeyFromPem(arcaCfg.clave), certificate: cert, digestAlgorithm: forge.pki.oids.sha256,
+    authenticatedAttributes: [{ type: forge.pki.oids.contentType, value: forge.pki.oids.data }, { type: forge.pki.oids.messageDigest }, { type: forge.pki.oids.signingTime, value: new Date() }] });
+  p7.sign();
+  const cms = forge.util.encode64(forge.asn1.toDer(p7.toAsn1()).getBytes());
+  const doc = await soap(ARCA.wsaa, `<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:wsaa="http://wsaa.view.sua.dvadac.desein.afip.gov"><soapenv:Header/><soapenv:Body><wsaa:loginCms><wsaa:in0>${cms}</wsaa:in0></wsaa:loginCms></soapenv:Body></soapenv:Envelope>`);
+  const resp = new DOMParser().parseFromString(doc.getElementsByTagName('loginCmsReturn')[0]?.textContent || '', 'text/xml');
+  const ta = { token: resp.getElementsByTagName('token')[0]?.textContent, sign: resp.getElementsByTagName('sign')[0]?.textContent,
+    vence: Date.parse(resp.getElementsByTagName('expirationTime')[0]?.textContent) || ahoraMs + 11 * 3600e3 };
+  if (!ta.token || !ta.sign) throw new Error('ARCA no devolvió el permiso de acceso');
+  arcaCfg.ta = ta; grabarArca();
+  return ta;
+}
+
+// Traduce los errores más comunes de ARCA a algo entendible
+function errorArca(e) {
+  const m = String(e?.message || e);
+  if (/ya posee un TA valido/i.test(m)) return 'ARCA todavía tiene abierto un acceso anterior. Esperá unos minutos y probá de nuevo.';
+  if (/no autorizado|notAuthorized|computador no autorizado|cms.cert/i.test(m)) return 'ARCA no autorizó el certificado para este servicio. Revisá el paso 2: la relación con "Consulta de constancia de inscripción" para el certificado ' + ARCA.alias + '.';
+  if (/expir|vencid/i.test(m)) return 'El certificado está vencido. Tocá "Cambiar certificado" y hacé los pasos de nuevo.';
+  if (/No existe persona/i.test(m)) return 'ARCA no tiene registrado ese CUIT.';
+  if (/timeout|timed out|failed to connect|unable to resolve|network/i.test(m)) return 'ARCA no responde. Revisá la conexión o probá en un rato.';
+  return 'ARCA respondió: ' + m;
+}
+
+let ultArca = null;
+async function consultarArca() {
+  const res = $('resArca');
+  ultArca = null;
+  const cuit = $('cuitArca').value.replace(/\D/g, '');
+  if (!cuitValido(cuit)) { res.innerHTML = `<div class="tarjeta error">El CUIT no es válido (tienen que ser 11 números y el dígito verificador correcto).</div>`; return; }
+  $('cuitArca').value = fmtCuit(cuit);
+  $('cuitArca').blur();
+  if (!arcaCfg.cert) {
+    res.innerHTML = `<div class="tarjeta"><div class="error">Falta configurar el certificado de ARCA.</div><div class="sub">Seguí los pasos de abajo (es una sola vez).</div></div>`;
+    $('arcaConfig').scrollIntoView({ behavior: 'smooth' });
+    return;
+  }
+  res.innerHTML = `<div class="tarjeta cargando">Consultando ${fmtCuit(cuit)} en ARCA…</div>`;
+  $('btnArca').disabled = true;
+  try {
+    const ta = await ticketArca();
+    const doc = await soap(ARCA.padron, `<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:a5="http://a5.soap.ws.server.puc.sr/"><soapenv:Header/><soapenv:Body><a5:getPersona_v2>` +
+      `<token>${esc(ta.token)}</token><sign>${esc(ta.sign)}</sign><cuitRepresentada>${arcaCfg.cuit}</cuitRepresentada><idPersona>${cuit}</idPersona></a5:getPersona_v2></soapenv:Body></soapenv:Envelope>`);
+    mostrarArca(doc, cuit, false);
+  } catch (e) {
+    if (/token|sign|TA/i.test(String(e?.message)) && !/ya posee/i.test(String(e?.message))) { delete arcaCfg.ta; grabarArca(); }
+    res.innerHTML = `<div class="tarjeta"><div class="error">No se pudo consultar a ARCA.</div><div class="sub">${esc(errorArca(e))}</div></div>`;
+  } finally { $('btnArca').disabled = false; }
+}
+
+// Ayudas para leer la respuesta de ARCA (sin importar prefijos de XML)
+const hijos = (el, n) => [...(el?.children || [])].filter(c => c.localName === n);
+const hijo = (el, n) => hijos(el, n)[0];
+const val = (el, n) => hijo(el, n)?.textContent.trim() || '';
+const fechaIso = f => fecha(String(f || '').slice(0, 10));
+const PROVINCIAS = { 0: 'Ciudad de Buenos Aires', 1: 'Buenos Aires', 2: 'Catamarca', 3: 'Córdoba', 4: 'Corrientes', 5: 'Entre Ríos', 6: 'Jujuy', 7: 'Mendoza', 8: 'La Rioja', 9: 'Salta',
+  10: 'San Juan', 11: 'San Luis', 12: 'Santa Fe', 13: 'Santiago del Estero', 14: 'Tucumán', 16: 'Chaco', 17: 'Chubut', 18: 'Formosa', 19: 'Misiones', 20: 'Neuquén', 21: 'La Pampa', 22: 'Río Negro', 23: 'Santa Cruz', 24: 'Tierra del Fuego' };
+const MESES = ['', 'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+function mostrarArca(doc, cuit, ejemplo) {
+  const p = doc.getElementsByTagNameNS('*', 'personaReturn')[0];
+  const res = $('resArca');
+  if (!p) { res.innerHTML = `<div class="tarjeta error">ARCA no devolvió datos para ese CUIT.</div>`; return; }
+  const g = hijo(p, 'datosGenerales'), rg = hijo(p, 'datosRegimenGeneral'), mt = hijo(p, 'datosMonotributo'), ec = hijo(p, 'errorConstancia');
+  const nombre = val(g, 'razonSocial') || [val(g, 'apellido'), val(g, 'nombre')].filter(Boolean).join(' ') || [val(ec, 'apellido'), val(ec, 'nombre')].filter(Boolean).join(' ');
+  const dom = hijo(g, 'domicilioFiscal');
+  const prov = val(dom, 'descripcionProvincia') || PROVINCIAS[val(dom, 'idProvincia')] || '';
+  const direccion = [val(dom, 'direccion'), val(dom, 'datoAdicional') && `(${val(dom, 'datoAdicional')})`].filter(Boolean).join(' ');
+  const lugar = [val(dom, 'localidad'), prov, val(dom, 'codPostal') && 'CP ' + val(dom, 'codPostal')].filter(Boolean).join(' · ');
+  const dato = (et, v) => v ? `<div class="dato"><div class="et">${esc(et)}</div><div class="va">${esc(v)}</div></div>` : '';
+  const actividades = [...hijos(rg, 'actividad'), ...hijos(mt, 'actividadMonotributista')]
+    .sort((a, b) => (+val(a, 'orden') || 99) - (+val(b, 'orden') || 99));
+  const impuestos = [...hijos(rg, 'impuesto'), ...hijos(mt, 'impuesto')];
+  const regimenes = hijos(rg, 'regimen');
+  const catMono = hijo(mt, 'categoriaMonotributo');
+  const caract = hijos(g, 'caracterizacion');
+  const errores = [...hijos(ec, 'error'), ...hijos(hijo(p, 'errorRegimenGeneral'), 'error'), ...hijos(hijo(p, 'errorMonotributo'), 'error')].map(e => e.textContent.trim()).filter(Boolean);
+  const esMono = !!catMono || hijos(mt, 'impuesto').length > 0;
+  const iva = impuestos.find(i => val(i, 'idImpuesto') === '30') ? 'Responsable inscripto' : esMono ? 'Monotributo' : impuestos.find(i => val(i, 'idImpuesto') === '32') ? 'Exento' : '';
+  const activo = /ACTIVO/i.test(val(g, 'estadoClave'));
+
+  let h = `<div class="tarjeta resultado arca">
+    ${ejemplo ? '<div class="ejemplo">EJEMPLO · datos inventados para ver cómo sale</div>' : ''}
+    <div class="sub">CUIT ${fmtCuit(cuit)} · Constancia de inscripción ARCA</div>
+    <h2>${nombre ? esc(nombre) : '<span class="naranja">Sin nombre registrado</span>'}</h2>
+    <div class="estado ${activo ? 'bien' : 'mal'}">${activo ? '✔' : '✖'} CUIT ${esc(val(g, 'estadoClave') || 'sin estado')}${iva ? `<small>Condición frente al IVA: ${esc(iva)}${catMono ? ' · Categoría ' + esc(val(catMono, 'descripcionCategoria')) : ''}</small>` : ''}</div>
+    <div class="seccion arca">Datos generales</div>
+    <div class="datos">
+      ${dato('Tipo de persona', val(g, 'tipoPersona') && (val(g, 'tipoPersona') === 'FISICA' ? 'Persona humana' : val(g, 'tipoPersona') === 'JURIDICA' ? 'Persona jurídica' : val(g, 'tipoPersona')))}
+      ${dato('Tipo de clave', val(g, 'tipoClave'))}
+      ${dato('Contrato social', val(g, 'fechaContratoSocial') && fechaIso(val(g, 'fechaContratoSocial')))}
+      ${dato('Cierre de ejercicio', +val(g, 'mesCierre') ? MESES[+val(g, 'mesCierre')] : '')}
+      ${dato('Sucesión', val(g, 'esSucesion') === 'SI' ? 'Sí' : '')}
+      ${dato('Dependencia ARCA', val(hijo(g, 'dependencia'), 'descripcionDependencia'))}
+      ${caract.map(c => dato('Característica', val(c, 'descripcionCaracterizacion'))).join('')}
+    </div>
+    <div class="seccion arca">Domicilio fiscal</div>
+    <div class="datos">${dato('Dirección', direccion)}${dato('Localidad', lugar)}${dato('Tipo', val(dom, 'tipoDomicilio'))}${!dom ? '<div class="sub">No informado</div>' : ''}</div>`;
+
+  if (catMono) h += `<div class="seccion arca">Monotributo</div><div class="datos">
+      ${dato('Categoría', val(catMono, 'descripcionCategoria'))}${dato('Desde', periodo(val(catMono, 'periodo')))}
+      ${hijos(mt, 'componenteDeSociedad').map(c => dato('Integrante', [val(c, 'apellidoPersonaAsociada'), val(c, 'nombrePersonaAsociada'), val(c, 'idPersonaAsociada')].filter(Boolean).join(' '))).join('')}</div>`;
+
+  h += `<div class="seccion arca">Actividades (${actividades.length})</div>
+    <div class="lista">${actividades.map(a => `<div class="item"><b>${esc(val(a, 'descripcionActividad'))}</b>${val(a, 'orden') === '1' ? ' <span class="verde">· principal</span>' : ''}<br>
+      <span class="grisc">Código ${esc(val(a, 'idActividad'))}${val(a, 'nomenclador') ? ' (nomenclador ' + esc(val(a, 'nomenclador')) + ')' : ''}${val(a, 'periodo') ? ' · desde ' + periodo(val(a, 'periodo')) : ''}</span></div>`).join('') || '<div class="sub">Sin actividades informadas</div>'}</div>
+    <div class="seccion arca">Impuestos (${impuestos.length})</div>
+    <div class="lista">${impuestos.map(i => `<div class="item"><b>${esc(val(i, 'descripcionImpuesto'))}</b><br><span class="grisc">Código ${esc(val(i, 'idImpuesto'))}${val(i, 'periodo') ? ' · desde ' + periodo(val(i, 'periodo')) : ''}${val(i, 'estadoImpuesto') ? ' · ' + esc(val(i, 'estadoImpuesto')) : ''}</span></div>`).join('') || '<div class="sub">Sin impuestos informados</div>'}</div>`;
+
+  if (regimenes.length) h += `<div class="seccion arca">Regímenes (${regimenes.length})</div>
+    <div class="lista">${regimenes.map(r => `<div class="item"><b>${esc(val(r, 'descripcionRegimen'))}</b><br><span class="grisc">${esc(val(r, 'tipoRegimen'))}${val(r, 'periodo') ? ' · desde ' + periodo(val(r, 'periodo')) : ''}</span></div>`).join('')}</div>`;
+
+  if (errores.length) h += `<div class="seccion arca">Observaciones de ARCA</div><div class="lista">${errores.map(e => `<div class="item naranja">${esc(e)}</div>`).join('')}</div>`;
+
+  // Todo lo que devolvió ARCA, campo por campo, por si hay algo que no está arriba
+  const crudo = [];
+  (function recorrer(el, ruta) {
+    for (const c of el.children) {
+      const r = ruta ? `${ruta} › ${c.localName}` : c.localName;
+      if (c.children.length) recorrer(c, r); else if (c.textContent.trim()) crudo.push([r, c.textContent.trim()]);
+    }
+  })(p, '');
+  h += `<details class="crudo no-imprimir"><summary>Ver todos los datos que devolvió ARCA (${crudo.length})</summary>${crudo.map(([r, v]) => dato(r, v)).join('')}</details>
+    <div class="pie">Fuente: ARCA · Constancia de inscripción · consultado el ${ahora()}</div>
+    <div class="acciones"><button class="btn sec" id="compArca">Compartir</button><button class="btn sec" id="pdfArca">PDF</button><button class="btn sec" id="copArca">Copiar</button></div>
+  </div>`;
+  res.innerHTML = h;
+
+  ultArca = [`CONSTANCIA DE INSCRIPCIÓN - ARCA${ejemplo ? ' (EJEMPLO)' : ''}`, `CUIT ${fmtCuit(cuit)}`, nombre,
+    `Estado: ${val(g, 'estadoClave')}${iva ? ' · IVA: ' + iva : ''}${catMono ? ' · Categoría ' + val(catMono, 'descripcionCategoria') : ''}`,
+    dom ? `Domicilio fiscal: ${direccion} - ${lugar}` : '',
+    actividades.length ? 'Actividades:\n' + actividades.map(a => `  · ${val(a, 'idActividad')} ${val(a, 'descripcionActividad')}${val(a, 'orden') === '1' ? ' (principal)' : ''}`).join('\n') : '',
+    impuestos.length ? 'Impuestos:\n' + impuestos.map(i => `  · ${val(i, 'descripcionImpuesto')}`).join('\n') : '',
+    errores.length ? 'Observaciones: ' + errores.join(' / ') : '',
+    `Fuente: ARCA - ${ahora()}`].filter(Boolean).join('\n');
+  $('compArca').onclick = () => compartir(ultArca, `Constancia ${fmtCuit(cuit)}`);
+  $('copArca').onclick = () => copiar(ultArca);
+  $('pdfArca').onclick = () => hacerPdf(`Constancia ARCA ${fmtCuit(cuit)} ${nombre}`, $('pdfArca'));
+  res.scrollIntoView({ behavior: 'smooth' });
+}
+
+// Respuesta de ejemplo con el mismo formato que devuelve ARCA (datos inventados)
+function xmlEjemploArca() {
+  return new DOMParser().parseFromString(`<personaReturn>
+    <datosGenerales><apellido>PEREZ</apellido><nombre>JUAN CARLOS</nombre><tipoPersona>FISICA</tipoPersona><tipoClave>CUIT</tipoClave><estadoClave>ACTIVO</estadoClave><idPersona>20123456786</idPersona>
+      <domicilioFiscal><direccion>AV SAN MARTIN 1234</direccion><datoAdicional>PISO 2 DTO B</datoAdicional><localidad>ROSARIO</localidad><codPostal>2000</codPostal><idProvincia>12</idProvincia><descripcionProvincia>SANTA FE</descripcionProvincia><tipoDomicilio>FISCAL</tipoDomicilio></domicilioFiscal>
+      <mesCierre>12</mesCierre><dependencia><descripcionDependencia>AGENCIA SEDE ROSARIO 1</descripcionDependencia></dependencia></datosGenerales>
+    <datosMonotributo><actividadMonotributista><idActividad>471110</idActividad><descripcionActividad>VENTA AL POR MENOR EN HIPERMERCADOS</descripcionActividad><nomenclador>883</nomenclador><orden>1</orden><periodo>201907</periodo></actividadMonotributista>
+      <categoriaMonotributo><descripcionCategoria>D LOCACIONES DE SERVICIO</descripcionCategoria><idCategoria>4</idCategoria><idImpuesto>20</idImpuesto><periodo>202402</periodo></categoriaMonotributo>
+      <impuesto><idImpuesto>20</idImpuesto><descripcionImpuesto>MONOTRIBUTO</descripcionImpuesto><periodo>201907</periodo></impuesto>
+      <impuesto><idImpuesto>21</idImpuesto><descripcionImpuesto>APORTES SEG.SOCIAL AUTONOMOS</descripcionImpuesto><periodo>201907</periodo></impuesto></datosMonotributo>
+    <datosRegimenGeneral><actividad><idActividad>620100</idActividad><descripcionActividad>SERVICIOS DE CONSULTORES EN INFORMÁTICA</descripcionActividad><nomenclador>883</nomenclador><orden>2</orden><periodo>202103</periodo></actividad></datosRegimenGeneral>
+    <metadata><fechaHora>2026-10-29T12:00:00</fechaHora><servidor>ejemplo</servidor></metadata></personaReturn>`, 'text/xml');
+}
+
+$('btnArca').onclick = consultarArca;
+$('cuitArca').addEventListener('keydown', e => { if (e.key === 'Enter') consultarArca(); });
 
 // ---------- Ventana de guardados ----------
 let hojaVista = 'guardados', hojaTipo = 'cuit';
