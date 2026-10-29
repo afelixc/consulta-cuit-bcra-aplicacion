@@ -121,6 +121,9 @@
   .g.alerta .t1 { color: var(--rojo); }
   .g .quitar { border: 0; background: #F3F4F6; border-radius: 8px; padding: 8px 10px; font-size: 13px; color: var(--gris); }
   .vacio { color: var(--gris); text-align: center; padding: 30px 10px; }
+  .actualizar { display: block; width: 100%; border: 0; text-align: left; background: #FFF4D6; color: #7A4B00; border: 1.5px solid #F0C36A; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; font-size: 15px; font-weight: 700; cursor: pointer; }
+  .actualizar[hidden] { display: none; }
+  .actualizar small { display: block; font-weight: 500; font-size: 13px; margin-top: 2px; }
   .aviso { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #222; color: #fff; padding: 10px 16px; border-radius: 20px; font-size: 14px; z-index: 60; opacity: 0; transition: opacity .2s; pointer-events: none; }
   .aviso.ver { opacity: .92; }
 
@@ -148,6 +151,7 @@
 </header>
 
 <main>
+  <button class="actualizar" id="actualizar" hidden></button>
   <!-- Solapa CUIT -->
   <section id="pagCuit">
     <div class="tarjeta no-imprimir">
@@ -663,6 +667,28 @@ $('hoja').onclick = e => { if (e.target === $('hoja')) $('hoja').classList.remov
 $('verGuardados').onclick = () => { hojaVista = 'guardados'; pintarHoja(); };
 $('verRecientes').onclick = () => { hojaVista = 'recientes'; pintarHoja(); };
 $('hojaBuscar').oninput = pintarHoja;
+
+// ---------- Aviso de versión nueva ----------
+// Al abrir, se fija en GitHub si hay un APK más nuevo que el instalado y muestra un cartel para bajarlo
+const REPO_APP = 'afelixc/consulta-cuit-bcra-aplicacion';
+async function buscarActualizacion() {
+  try {
+    const app = window.Capacitor?.Plugins?.App;
+    if (!app) return;
+    const { build } = await app.getInfo();
+    const r = await fetch(`https://api.github.com/repos/${REPO_APP}/releases/latest`, { cache: 'no-store' });
+    if (!r.ok) return;
+    const ultima = await r.json();
+    const nueva = +(/(\d+)$/.exec(ultima.tag_name || '')?.[1] || 0);
+    const apk = (ultima.assets || []).find(a => a.name.endsWith('.apk'));
+    if (!apk || nueva <= +build) return;
+    const b = $('actualizar');
+    b.innerHTML = `⬇ Hay una versión nueva de la app<small>Tocá acá para descargarla. Después abrila y tocá “Actualizar” (no se pierden los guardados).</small>`;
+    b.hidden = false;
+    b.onclick = () => { location.href = apk.browser_download_url; };
+  } catch {}
+}
+buscarActualizacion();
 
 // Botón "atrás" de Android: primero cierra la ventana de guardados
 window.Capacitor?.Plugins?.App?.addListener?.('backButton', ({ canGoBack }) => {
