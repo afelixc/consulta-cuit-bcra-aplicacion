@@ -1180,7 +1180,9 @@ $('hojaBuscar').oninput = pintarHoja;
 
 // ---------- Aviso de versión nueva ----------
 // Al abrir, se fija en GitHub si hay un APK más nuevo que el instalado y muestra un cartel para bajarlo
-const REPO_APP = 'afelixc/consulta-cuit-bcra-aplicacion';
+// Cada versión (Android / Windows) indica en CONFIG_APP dónde busca sus actualizaciones
+const REPO_APP = window.CONFIG_APP?.repo || 'afelixc/consulta-cuit-bcra-aplicacion';
+const EXT_APP = window.CONFIG_APP?.extension || '.apk';
 async function buscarActualizacion() {
   try {
     const app = window.Capacitor?.Plugins?.App;
@@ -1190,7 +1192,7 @@ async function buscarActualizacion() {
     if (!r.ok) return;
     const ultima = await r.json();
     const nueva = +(/(\d+)$/.exec(ultima.tag_name || '')?.[1] || 0);
-    const apk = (ultima.assets || []).find(a => a.name.endsWith('.apk'));
+    const apk = (ultima.assets || []).find(a => a.name.endsWith(EXT_APP));
     if (!apk || nueva <= +build) return;
     const b = $('actualizar');
     b.innerHTML = `⬇ Hay una versión nueva de la app<small>Tocá acá para actualizar (no se pierden los guardados).</small>`;
