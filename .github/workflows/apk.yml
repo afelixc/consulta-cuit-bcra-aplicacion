@@ -33,9 +33,18 @@ jobs:
       - name: Cargar la firma
         env:
           FIRMA_BASE64: ${{ secrets.FIRMA_BASE64 }}
+          FIRMA_CLAVE: ${{ secrets.FIRMA_CLAVE }}
         run: |
           if [ -n "$FIRMA_BASE64" ]; then
-            echo "$FIRMA_BASE64" | base64 -d > "$RUNNER_TEMP/firma.jks"
+            # Se sacan espacios y saltos de línea que se cuelan al copiar y pegar
+            if ! printf '%s' "$FIRMA_BASE64" | tr -d ' \r\n\t"' | base64 -d > "$RUNNER_TEMP/firma.jks" 2>/dev/null; then
+              echo "::error::El secret FIRMA_BASE64 está mal copiado: tiene que ser TODO el texto del archivo FIRMA_BASE64.txt (unos 3568 caracteres, empieza con MII). Largo recibido: $(printf '%s' "$FIRMA_BASE64" | tr -d ' \r\n\t' | wc -c)"
+              exit 1
+            fi
+            if ! keytool -list -keystore "$RUNNER_TEMP/firma.jks" -storepass "$FIRMA_CLAVE" >/dev/null 2>&1; then
+              echo "::error::La firma no abre con FIRMA_CLAVE: revisá que FIRMA_CLAVE sea exactamente el texto de FIRMA_CLAVE.txt (23 caracteres, sin espacios). Largo recibido: ${#FIRMA_CLAVE}"
+              exit 1
+            fi
             echo "FIRMA_ARCHIVO=$RUNNER_TEMP/firma.jks" >> "$GITHUB_ENV"
           else
             echo "::warning::Falta el secret FIRMA_BASE64: el APK sale con firma de prueba y no se podrá actualizar encima de otra versión."
