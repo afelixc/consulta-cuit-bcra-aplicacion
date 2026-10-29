@@ -145,6 +145,8 @@
   .paso-t.hecho { color: var(--ok); }
   .btn.chico { padding: 9px 12px; font-size: 14px; }
   .cert-ok { color: var(--ok); font-weight: 700; font-size: 14px; }
+  .hoja .copia-pie { padding: 8px 16px calc(12px + env(safe-area-inset-bottom)); font-size: 13px; color: var(--gris); border-top: 1px solid var(--borde); text-align: center; }
+  .hoja .copia-pie button { border: 0; background: none; color: var(--color); font-weight: 700; font-size: 13px; padding: 4px 6px; text-decoration: underline; }
   .aviso { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #222; color: #fff; padding: 10px 16px; border-radius: 20px; font-size: 14px; z-index: 60; opacity: 0; transition: opacity .2s; pointer-events: none; }
   .aviso.ver { opacity: .92; }
 
@@ -237,9 +239,11 @@
     </div>
     <div class="busca"><input type="search" id="hojaBuscar" placeholder="Buscar: nombre, CUIT, banco, número o nota"></div>
     <div class="cuerpo" id="hojaLista"></div>
+    <div class="copia-pie">Copia de seguridad: <button id="hojaCopia">Hacer copia</button>·<button id="hojaRestaurar">Restaurar</button></div>
   </div>
 </div>
 <div class="aviso" id="aviso"></div>
+<input type="file" id="copiaArchivo" hidden>
 
 <script src="lib/html2canvas.min.js"></script>
 <script src="lib/jspdf.umd.min.js"></script>
@@ -702,6 +706,15 @@ function pintarConfigArca() {
     $('arcaArchivo').onchange = cargarCertArca;
     $('arcaRehacer').onclick = () => borrarCertArca('¿Borrar el pedido y empezar de nuevo?');
   }
+  const ultimaCopia = almacen.leer('ultimaCopia', '');
+  caja.insertAdjacentHTML('beforeend', `<div class="paso-t" style="margin-top:16px">Copia de seguridad</div>
+    <div class="ayuda" style="margin-top:4px">${arcaCfg.cert
+      ? 'Guarda el certificado y todos tus guardados en un archivo protegido con clave (guardalo en tu Drive). Si reinstalás la app o cambiás de teléfono, lo restaurás y no hay que volver a pasar por ARCA.'
+      : '¿Ya tenías la app configurada en otro teléfono? Tocá “Restaurar copia” y elegí el archivo de la copia.'}</div>
+    ${arcaCfg.cert ? `<div class="sub ${ultimaCopia ? '' : 'naranja'}" style="margin-top:4px;font-weight:600">${ultimaCopia ? 'Última copia: ' + esc(ultimaCopia) : 'Todavía no hiciste ninguna copia'}</div>` : ''}
+    <div class="acciones"><button class="btn sec chico" id="copiaHacer">Hacer copia</button><button class="btn sec chico" id="copiaRestaurar">Restaurar copia</button></div>`);
+  $('copiaHacer').onclick = hacerCopia;
+  $('copiaRestaurar').onclick = () => $('copiaArchivo').click();
   $('arcaEjemplo').onclick = () => mostrarArca(xmlEjemploArca(), '20123456786', true);
 }
 
@@ -992,6 +1005,77 @@ function xmlEjemploArca() {
 
 $('btnArca').onclick = consultarArca;
 $('cuitArca').addEventListener('keydown', e => { if (e.key === 'Enter') consultarArca(); });
+
+// ---------- Copia de seguridad ----------
+// Un archivo cifrado con una clave que elige el usuario (AES-GCM, clave derivada con PBKDF2).
+// Lleva el certificado de ARCA (con su clave privada) y los guardados, para restaurarlos en otro teléfono.
+const B64 = u8 => forge.util.binary.base64.encode(u8);
+const desdeB64 = t => forge.util.binary.base64.decode(t);
+async function claveCopia(pass, sal) {
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: sal, iterations: 200000, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+}
+
+async function hacerCopia() {
+  if (!window.crypto?.subtle) { alert('Este teléfono no permite hacer la copia.'); return; }
+  const pass = prompt('Elegí una clave para proteger la copia (mínimo 4 letras o números).\n\nAnotala: la vas a necesitar para restaurar.');
+  if (pass === null) return;
+  if (pass.trim().length < 4) { alert('La clave tiene que tener al menos 4 caracteres. No se hizo la copia.'); return; }
+  if (prompt('Escribí la clave otra vez, para confirmar.') !== pass) { alert('Las claves no coinciden. No se hizo la copia.'); return; }
+  try {
+    const { ta, ...arca } = arcaCfg;
+    const datos = { arca, guardadosCuit: gCuit, guardadosCheq: gCheq, guardadosArca: gArca, recientes };
+    const sal = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+    const cifrado = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await claveCopia(pass.trim(), sal), new TextEncoder().encode(JSON.stringify(datos)));
+    const contenido = JSON.stringify({ app: 'consulta-cuit-bcra', version: 1, fecha: ahora(), sal: B64(sal), iv: B64(iv), datos: B64(new Uint8Array(cifrado)) });
+    const nombre = `copia-consulta-cuit-${new Date().toISOString().slice(0, 10)}.json`;
+    if (nativo.Filesystem && nativo.Share) {
+      const { uri } = await nativo.Filesystem.writeFile({ path: nombre, data: contenido, directory: 'CACHE', encoding: 'utf8' });
+      await nativo.Share.share({ title: nombre, files: [uri], dialogTitle: 'Guardá la copia (por ejemplo en Drive)' });
+    } else {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([contenido], { type: 'application/json' }));
+      a.download = nombre; a.click();
+    }
+    almacen.escribir('ultimaCopia', ahora());
+    if (!$('pagArca').hidden) pintarConfigArca();
+  } catch (e) {
+    if (!/cancel/i.test(String(e?.message || e))) alert('No se pudo hacer la copia.');
+  }
+}
+
+const unir = (actual, copia, clave) => { const ya = new Set(actual.map(clave)); return [...actual, ...(copia || []).filter(x => !ya.has(clave(x)))]; };
+
+async function restaurarCopia(ev) {
+  const f = ev.target.files?.[0];
+  ev.target.value = '';
+  if (!f) return;
+  let copia;
+  try { copia = JSON.parse(await f.text()); } catch {}
+  if (copia?.app !== 'consulta-cuit-bcra' || !copia.datos) { alert('Ese archivo no es una copia de seguridad de esta app.'); return; }
+  const pass = prompt(`Copia del ${copia.fecha}.\n\nEscribí la clave de la copia.`);
+  if (pass === null) return;
+  let datos;
+  try {
+    const plano = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: desdeB64(copia.iv) }, await claveCopia(pass.trim(), desdeB64(copia.sal)), desdeB64(copia.datos));
+    datos = JSON.parse(new TextDecoder().decode(plano));
+  } catch { alert('La clave no es correcta.'); return; }
+  const n = (datos.guardadosCuit?.length || 0) + (datos.guardadosCheq?.length || 0) + (datos.guardadosArca?.length || 0);
+  const conCert = !!datos.arca?.cert;
+  if (!confirm(`Se va a cargar:\n${conCert ? `• El certificado de ARCA (CUIT ${fmtCuit(datos.arca.cuit)})${arcaCfg.cert ? ', reemplazando el que hay ahora' : ''}\n` : ''}• ${n} guardados (los que ya tenés en este teléfono se mantienen)\n\n¿Continuar?`)) return;
+  if (conCert) { arcaCfg = datos.arca; grabarArca(); }
+  gCuit = unir(gCuit, datos.guardadosCuit, g => g.cuit);
+  gCheq = unir(gCheq, datos.guardadosCheq, g => claveCheq(g));
+  gArca = unir(gArca, datos.guardadosArca, g => g.cuit);
+  recientes = unir(recientes, datos.recientes, r => r.clave).slice(0, 60);
+  grabar();
+  if (!$('pagArca').hidden) pintarConfigArca();
+  if ($('hoja').classList.contains('abierta')) pintarHoja();
+  aviso('Copia restaurada ✔');
+}
+$('copiaArchivo').onchange = restaurarCopia;
+$('hojaCopia').onclick = hacerCopia;
+$('hojaRestaurar').onclick = () => $('copiaArchivo').click();
 
 // ---------- Ventana de guardados ----------
 let hojaVista = 'guardados', hojaTipo = 'cuit';
