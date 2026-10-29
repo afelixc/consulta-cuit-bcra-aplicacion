@@ -53,7 +53,16 @@ jobs:
           ./gradlew assembleRelease --no-daemon
           cp app/build/outputs/apk/release/app-release.apk ../Consulta-CUIT-BCRA.apk
 
+      # Sin la firma definitiva el APK queda solo como prueba (en la pestaña Actions), no se publica
+      - name: Guardar APK de prueba
+        if: env.FIRMA_ARCHIVO == ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: APK-de-prueba
+          path: Consulta-CUIT-BCRA.apk
+
       - name: Publicar en Releases
+        if: env.FIRMA_ARCHIVO != ''
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
