@@ -1,0 +1,62 @@
+# Compila el APK de Android y lo publica en "Releases" cada vez que se suben cambios.
+name: Compilar APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Preparar el proyecto
+        run: |
+          npm ci
+          npx cap sync android
+
+      - name: Cargar la firma
+        env:
+          FIRMA_BASE64: ${{ secrets.FIRMA_BASE64 }}
+        run: |
+          if [ -n "$FIRMA_BASE64" ]; then
+            echo "$FIRMA_BASE64" | base64 -d > "$RUNNER_TEMP/firma.jks"
+            echo "FIRMA_ARCHIVO=$RUNNER_TEMP/firma.jks" >> "$GITHUB_ENV"
+          else
+            echo "::warning::Falta el secret FIRMA_BASE64: el APK sale con firma de prueba y no se podrá actualizar encima de otra versión."
+          fi
+
+      - name: Compilar
+        working-directory: android
+        env:
+          FIRMA_CLAVE: ${{ secrets.FIRMA_CLAVE }}
+          NUMERO_VERSION: ${{ github.run_number }}
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+          cp app/build/outputs/apk/release/app-release.apk ../Consulta-CUIT-BCRA.apk
+
+      - name: Publicar en Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v1.0.${{ github.run_number }}" Consulta-CUIT-BCRA.apk \
+            --title "Consulta CUIT BCRA - App Android 1.0.${{ github.run_number }}" \
+            --notes "Descargá **Consulta-CUIT-BCRA.apk** desde el teléfono y abrilo para instalar."

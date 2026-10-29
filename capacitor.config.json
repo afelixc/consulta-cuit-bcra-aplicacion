@@ -1,0 +1,8 @@
+{
+  "appId": "ar.afelixc.consultacuit",
+  "appName": "Consulta CUIT",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#1F4E8C"
+  }
+}

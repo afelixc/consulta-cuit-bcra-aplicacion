@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Consulta CUIT</string>
+    <string name="title_activity_main">Consulta CUIT</string>
+    <string name="package_name">ar.afelixc.consultacuit</string>
+    <string name="custom_url_scheme">ar.afelixc.consultacuit</string>
+</resources>
