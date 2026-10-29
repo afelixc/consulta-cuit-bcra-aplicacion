@@ -684,10 +684,34 @@ async function buscarActualizacion() {
     const apk = (ultima.assets || []).find(a => a.name.endsWith('.apk'));
     if (!apk || nueva <= +build) return;
     const b = $('actualizar');
-    b.innerHTML = `⬇ Hay una versión nueva de la app<small>Tocá acá para descargarla. Después abrila y tocá “Actualizar” (no se pierden los guardados).</small>`;
+    b.innerHTML = `⬇ Hay una versión nueva de la app<small>Tocá acá para actualizar (no se pierden los guardados).</small>`;
     b.hidden = false;
-    b.onclick = () => { location.href = apk.browser_download_url; };
+    b.onclick = () => instalarActualizacion(apk.browser_download_url);
   } catch {}
+}
+// La app baja el APK y abre directo la ventana de Android para actualizar
+async function instalarActualizacion(url) {
+  const { Filesystem, FileOpener } = window.Capacitor?.Plugins || {};
+  const b = $('actualizar');
+  if (!Filesystem || !FileOpener) { location.href = url; return; }
+  if (b.disabled) return;
+  b.disabled = true;
+  b.innerHTML = `Descargando la versión nueva…<small>Esperá unos segundos.</small>`;
+  let escucha;
+  try {
+    escucha = await Filesystem.addListener('progress', p => {
+      if (p.contentLength > 0) b.innerHTML = `Descargando la versión nueva… ${Math.round(100 * p.bytes / p.contentLength)}%<small>Esperá unos segundos.</small>`;
+    });
+    const { path } = await Filesystem.downloadFile({ url, path: 'actualizacion.apk', directory: 'CACHE', progress: true });
+    b.innerHTML = `⬇ Versión nueva descargada<small>Tocá “Actualizar” en la ventana de Android. Si no apareció, tocá acá de nuevo.</small>`;
+    await FileOpener.open({ filePath: path, contentType: 'application/vnd.android.package-archive' });
+  } catch {
+    // Si algo falla, se descarga como antes, por el navegador
+    location.href = url;
+  } finally {
+    escucha?.remove?.();
+    b.disabled = false;
+  }
 }
 buscarActualizacion();
 
