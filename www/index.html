@@ -131,13 +131,16 @@
   .resultado.arca h2 { color: var(--violeta); }
   .datos { margin-top: 6px; }
   .dato { display: flex; gap: 10px; border-top: 1px solid #eef0f3; padding: 7px 0; font-size: 14px; }
-  .dato .et { color: var(--gris); width: 38%; flex-shrink: 0; }
+  .dato .et { color: var(--gris); width: 38%; flex-shrink: 0; overflow-wrap: anywhere; }
   .dato .va { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
   .seccion.arca { color: var(--violeta); }
   .ejemplo { background: #FFF4D6; color: #7A4B00; border-radius: 10px; padding: 8px 10px; font-weight: 800; font-size: 14px; margin-bottom: 8px; text-align: center; }
   details.crudo { margin-top: 14px; font-size: 13px; }
   details.crudo summary { color: var(--violeta); font-weight: 700; cursor: pointer; }
-  details.crudo .dato { font-size: 12px; }
+  details.crudo .dato { display: block; font-size: 13px; padding: 5px 0; }
+  details.crudo .dato .et { width: auto; font-size: 12px; }
+  details.crudo .gt { font-weight: 800; color: var(--violeta); margin-top: 10px; font-size: 13px; }
+  details.crudo .grupo { margin-left: 4px; padding-left: 10px; border-left: 2px solid var(--violeta-medio); }
   .pasos { margin: 8px 0 0; padding-left: 20px; font-size: 14px; line-height: 1.45; }
   .pasos li { margin-bottom: 6px; }
   .paso-t { font-weight: 800; color: var(--violeta); margin-top: 14px; font-size: 15px; }
@@ -886,6 +889,21 @@ const PROVINCIAS = { 0: 'Ciudad de Buenos Aires', 1: 'Buenos Aires', 2: 'Catamar
   10: 'San Juan', 11: 'San Luis', 12: 'Santa Fe', 13: 'Santiago del Estero', 14: 'Tucumán', 16: 'Chaco', 17: 'Chubut', 18: 'Formosa', 19: 'Misiones', 20: 'Neuquén', 21: 'La Pampa', 22: 'Río Negro', 23: 'Santa Cruz', 24: 'Tierra del Fuego' };
 const MESES = ['', 'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
+// Nombres de los campos de ARCA en castellano (si falta alguno, se separa la palabra: "fechaHora" → "Fecha hora")
+const CAMPOS = { datosGenerales: 'Datos generales', datosRegimenGeneral: 'Régimen general', datosMonotributo: 'Monotributo', domicilioFiscal: 'Domicilio fiscal',
+  actividad: 'Actividad', actividadMonotributista: 'Actividad (monotributo)', impuesto: 'Impuesto', regimen: 'Régimen', categoriaMonotributo: 'Categoría de monotributo',
+  caracterizacion: 'Característica', dependencia: 'Dependencia', metadata: 'Datos de la consulta', errorConstancia: 'Observaciones', errorRegimenGeneral: 'Observaciones (régimen general)',
+  errorMonotributo: 'Observaciones (monotributo)', componenteDeSociedad: 'Integrante de la sociedad', error: 'Observación',
+  apellido: 'Apellido', nombre: 'Nombre', razonSocial: 'Razón social', tipoPersona: 'Tipo de persona', tipoClave: 'Tipo de clave', estadoClave: 'Estado', idPersona: 'CUIT',
+  direccion: 'Dirección', localidad: 'Localidad', codPostal: 'Código postal', idProvincia: 'Código de provincia', descripcionProvincia: 'Provincia', tipoDomicilio: 'Tipo de domicilio',
+  datoAdicional: 'Dato adicional', tipoDatoAdicional: 'Tipo de dato adicional', esSucesion: 'Es sucesión', mesCierre: 'Mes de cierre', fechaContratoSocial: 'Fecha del contrato social',
+  descripcionActividad: 'Descripción', idActividad: 'Código', nomenclador: 'Nomenclador', orden: 'Orden (1 = principal)', periodo: 'Desde (período)',
+  descripcionImpuesto: 'Descripción', idImpuesto: 'Código de impuesto', estadoImpuesto: 'Estado', descripcionRegimen: 'Descripción', idRegimen: 'Código de régimen', tipoRegimen: 'Tipo',
+  descripcionCategoria: 'Categoría', idCategoria: 'Código de categoría', descripcionCaracterizacion: 'Descripción', idCaracterizacion: 'Código',
+  codDependencia: 'Código', descripcionDependencia: 'Descripción', categoriaAutonomo: 'Categoría de autónomo', fechaHora: 'Fecha y hora', servidor: 'Servidor',
+  apellidoPersonaAsociada: 'Apellido', nombrePersonaAsociada: 'Nombre', idPersonaAsociada: 'CUIT', ffRelacion: 'Desde', ffVencimiento: 'Hasta', tipoComponente: 'Tipo' };
+const nombreCampo = n => CAMPOS[n] || n.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase().replace(/^./, c => c.toUpperCase());
+
 function mostrarArca(doc, cuit, ejemplo) {
   const p = doc.getElementsByTagNameNS('*', 'personaReturn')[0];
   const res = $('resArca');
@@ -941,16 +959,25 @@ function mostrarArca(doc, cuit, ejemplo) {
 
   if (errores.length) h += `<div class="seccion arca">Observaciones de ARCA</div><div class="lista">${errores.map(e => `<div class="item naranja">${esc(e)}</div>`).join('')}</div>`;
 
-  // Todo lo que devolvió ARCA, campo por campo, por si hay algo que no está arriba
-  const crudo = [];
-  (function recorrer(el, ruta) {
-    for (const c of el.children) {
-      const r = ruta ? `${ruta} › ${c.localName}` : c.localName;
-      if (c.children.length) recorrer(c, r); else if (c.textContent.trim()) crudo.push([r, c.textContent.trim()]);
+  // Todo lo que devolvió ARCA, campo por campo, por si hay algo que no está arriba.
+  // Cada sección con su título y cada actividad/impuesto numerado; el nombre del campo va arriba del valor.
+  let cantCampos = 0;
+  const grupo = el => [...el.children].map(c => {
+    if (c.children.length) {
+      const iguales = hijos(el, c.localName);
+      const n = iguales.length > 1 ? ' ' + (iguales.indexOf(c) + 1) : '';
+      return `<div class="gt">${esc(nombreCampo(c.localName) + n)}</div><div class="grupo">${grupo(c)}</div>`;
     }
-  })(p, '');
+    let v = c.textContent.trim();
+    if (!v) return '';
+    cantCampos++;
+    if (/^periodo$/i.test(c.localName) && /^\d{6}$/.test(v)) v = periodo(v);
+    else if (/^\d{4}-\d{2}-\d{2}T/.test(v)) v = fechaIso(v) + (/T00:00|T12:00:00/.test(v) ? '' : ' ' + v.slice(11, 16));
+    return dato(nombreCampo(c.localName), v);
+  }).join('');
+  const crudoHtml = grupo(p);
   const guardado = ejemplo ? null : gArca.find(x => x.cuit === fmtCuit(cuit));
-  h += `<details class="crudo no-imprimir"><summary>Ver todos los datos que devolvió ARCA (${crudo.length})</summary>${crudo.map(([r, v]) => dato(r, v)).join('')}</details>
+  h += `<details class="crudo no-imprimir"><summary>Ver todos los datos que devolvió ARCA (${cantCampos})</summary>${crudoHtml}</details>
     ${guardado?.nota ? `<div class="nota-guardada">Nota: ${esc(guardado.nota)}</div>` : ''}
     <div class="pie">Fuente: ARCA · Constancia de inscripción · consultado el ${ahora()}</div>
     ${ejemplo ? '' : `<div class="guardar"><input type="checkbox" id="chkArca" ${guardado ? 'checked' : ''}><label for="chkArca">Guardar este CUIT</label></div>
