@@ -149,7 +149,7 @@
   .aviso.ver { opacity: .92; }
 
   /* Mientras se arma el PDF no se ven los botones ni la casilla de guardar */
-  body.armando-pdf .guardar, body.armando-pdf .acciones, body.armando-pdf #notaCuit, body.armando-pdf #notaCheq { display: none !important; }
+  body.armando-pdf .guardar, body.armando-pdf .acciones, body.armando-pdf #notaCuit, body.armando-pdf #notaCheq, body.armando-pdf #notaArca { display: none !important; }
   @media print {
     header, .no-imprimir, .hoja, .guardar, .acciones { display: none !important; }
     body { background: #fff; }
@@ -216,7 +216,7 @@
     <div class="tarjeta no-imprimir">
       <label class="campo" for="cuitArca">CUIT / CUIL a consultar en ARCA</label>
       <input type="text" id="cuitArca" inputmode="numeric" autocomplete="off" placeholder="Ej: 20-12345678-9">
-      <div class="ayuda">Trae los datos de la constancia de inscripción: nombre, domicilio fiscal, actividades, impuestos y monotributo.</div>
+      <div class="ayuda">Trae los datos de la constancia de inscripción: nombre, domicilio fiscal, actividades, impuestos y monotributo. También podés escribir un nombre o una nota de tus guardados.</div>
       <button class="btn principal" id="btnArca">Consultar en ARCA</button>
     </div>
     <div id="resArca"></div>
@@ -258,8 +258,9 @@ const almacen = {
 };
 let gCuit = almacen.leer('guardadosCuit', []);
 let gCheq = almacen.leer('guardadosCheq', []);
+let gArca = almacen.leer('guardadosArca', []);
 let recientes = almacen.leer('recientes', []);
-const grabar = () => { almacen.escribir('guardadosCuit', gCuit); almacen.escribir('guardadosCheq', gCheq); almacen.escribir('recientes', recientes); };
+const grabar = () => { almacen.escribir('guardadosCuit', gCuit); almacen.escribir('guardadosCheq', gCheq); almacen.escribir('guardadosArca', gArca); almacen.escribir('recientes', recientes); };
 
 function agregarReciente(r) {
   recientes = recientes.filter(x => x.clave !== r.clave);
@@ -670,7 +671,7 @@ function pintarConfigArca() {
     caja.innerHTML = `<div class="cert-ok">✔ Certificado de ARCA cargado (CUIT ${esc(fmtCuit(arcaCfg.cuit))})</div>
       <div class="sub ${dias < 30 ? 'rojo' : ''}">Vence el ${ic.vence.toLocaleDateString('es-AR')}${dias < 30 ? ` · ¡faltan ${Math.max(dias, 0)} días! Hay que renovarlo` : ''}</div>
       <div class="acciones"><button class="btn sec chico" id="arcaEjemplo">Ver un ejemplo</button><button class="btn sec chico" id="arcaRehacer">Cambiar certificado</button></div>`;
-    $('arcaRehacer').onclick = () => { if (confirm('¿Borrar el certificado cargado y armar uno nuevo?')) { arcaCfg = {}; grabarArca(); pintarConfigArca(); } };
+    $('arcaRehacer').onclick = () => borrarCertArca('¿Borrar el certificado cargado y armar uno nuevo?\n\nVas a tener que hacer de nuevo los pasos en la página de ARCA.');
   } else if (!arcaCfg.clave) {
     caja.innerHTML = `<div class="paso-t">Configurar ARCA (una sola vez)</div>
       <div class="ayuda" style="margin-top:4px">Para consultar ARCA hace falta tu certificado digital (es gratis). Se hace en 3 pasos y no se vuelve a pedir por 2 años.</div>
@@ -699,9 +700,18 @@ function pintarConfigArca() {
     $('arcaPedido').onclick = enviarPedidoArca;
     $('arcaCargar').onclick = () => $('arcaArchivo').click();
     $('arcaArchivo').onchange = cargarCertArca;
-    $('arcaRehacer').onclick = () => { if (confirm('¿Borrar el pedido y empezar de nuevo?')) { arcaCfg = {}; grabarArca(); pintarConfigArca(); } };
+    $('arcaRehacer').onclick = () => borrarCertArca('¿Borrar el pedido y empezar de nuevo?');
   }
   $('arcaEjemplo').onclick = () => mostrarArca(xmlEjemploArca(), '20123456786', true);
+}
+
+// Borrar el certificado pide dos confirmaciones, para que no se borre por tocar "Aceptar" sin querer
+function borrarCertArca(pregunta) {
+  if (!confirm(pregunta)) return;
+  const r = prompt('Para confirmar, escribí BORRAR y tocá Aceptar.');
+  if (String(r || '').trim().toUpperCase() !== 'BORRAR') { aviso('No se borró nada'); return; }
+  arcaCfg = {}; grabarArca(); pintarConfigArca();
+  aviso('Certificado borrado');
 }
 
 async function generarPedidoArca() {
@@ -826,7 +836,13 @@ let ultArca = null;
 async function consultarArca() {
   const res = $('resArca');
   ultArca = null;
-  const cuit = $('cuitArca').value.replace(/\D/g, '');
+  const texto = $('cuitArca').value.trim();
+  let cuit = texto.replace(/\D/g, '');
+  if (/[a-záéíóúñ]/i.test(texto)) {
+    const m = gArca.filter(g => coincide(`${g.cuit} ${g.nombre} ${g.nota}`, texto));
+    if (m.length === 1) cuit = m[0].cuit.replace(/\D/g, '');
+    else { abrirHoja('arca', texto); return; }
+  }
   if (!cuitValido(cuit)) { res.innerHTML = `<div class="tarjeta error">El CUIT no es válido (tienen que ser 11 números y el dígito verificador correcto).</div>`; return; }
   $('cuitArca').value = fmtCuit(cuit);
   $('cuitArca').blur();
@@ -920,8 +936,12 @@ function mostrarArca(doc, cuit, ejemplo) {
       if (c.children.length) recorrer(c, r); else if (c.textContent.trim()) crudo.push([r, c.textContent.trim()]);
     }
   })(p, '');
+  const guardado = ejemplo ? null : gArca.find(x => x.cuit === fmtCuit(cuit));
   h += `<details class="crudo no-imprimir"><summary>Ver todos los datos que devolvió ARCA (${crudo.length})</summary>${crudo.map(([r, v]) => dato(r, v)).join('')}</details>
+    ${guardado?.nota ? `<div class="nota-guardada">Nota: ${esc(guardado.nota)}</div>` : ''}
     <div class="pie">Fuente: ARCA · Constancia de inscripción · consultado el ${ahora()}</div>
+    ${ejemplo ? '' : `<div class="guardar"><input type="checkbox" id="chkArca" ${guardado ? 'checked' : ''}><label for="chkArca">Guardar este CUIT</label></div>
+    <input type="text" id="notaArca" placeholder="Nota: ej. cliente nuevo, proveedor de…" value="${esc(guardado?.nota || '')}" style="margin-top:8px;font-size:16px">`}
     <div class="acciones"><button class="btn sec" id="compArca">Compartir</button><button class="btn sec" id="pdfArca">PDF</button><button class="btn sec" id="copArca">Copiar</button></div>
   </div>`;
   res.innerHTML = h;
@@ -933,6 +953,23 @@ function mostrarArca(doc, cuit, ejemplo) {
     impuestos.length ? 'Impuestos:\n' + impuestos.map(i => `  · ${val(i, 'descripcionImpuesto')}`).join('\n') : '',
     errores.length ? 'Observaciones: ' + errores.join(' / ') : '',
     `Fuente: ARCA - ${ahora()}`].filter(Boolean).join('\n');
+  if (!ejemplo) {
+    const resumen = { cuit: fmtCuit(cuit), nombre, estado: val(g, 'estadoClave'), iva: [iva, catMono && 'Cat. ' + val(catMono, 'descripcionCategoria')].filter(Boolean).join(' · '),
+      domicilio: dom ? `${direccion} - ${lugar}` : '', ultima: ahora(), alerta: !activo };
+    if (guardado) Object.assign(guardado, resumen);
+    agregarReciente({ tipo: 'arca', clave: 'arca|' + resumen.cuit, t1: `${resumen.cuit} ${nombre}`, t2: [resumen.estado, resumen.iva].filter(Boolean).join(' · '), fecha: resumen.ultima, alerta: resumen.alerta, datos: { cuit: resumen.cuit } });
+    const guardar = () => {
+      const i = gArca.findIndex(x => x.cuit === resumen.cuit);
+      if ($('chkArca').checked) {
+        const d = { ...resumen, nota: $('notaArca').value.trim(), guardado: i >= 0 ? gArca[i].guardado : ahora() };
+        if (i >= 0) gArca[i] = d; else gArca.unshift(d);
+        aviso('Guardado ★');
+      } else if (i >= 0) { gArca.splice(i, 1); aviso('Quitado de guardados'); }
+      grabar();
+    };
+    $('chkArca').onchange = guardar;
+    $('notaArca').onchange = () => { if ($('chkArca').checked) guardar(); };
+  }
   $('compArca').onclick = () => compartir(ultArca, `Constancia ${fmtCuit(cuit)}`);
   $('copArca').onclick = () => copiar(ultArca);
   $('pdfArca').onclick = () => hacerPdf(`Constancia ARCA ${fmtCuit(cuit)} ${nombre}`, $('pdfArca'));
@@ -965,25 +1002,29 @@ function abrirHoja(tipo, filtro = '') {
   pintarHoja();
 }
 function pintarHoja() {
-  const cheque = hojaTipo === 'cheque';
-  $('hojaTitulo').textContent = cheque ? 'Cheques' : 'CUIT';
+  const tipo = hojaTipo, cheque = tipo === 'cheque', arca = tipo === 'arca';
+  const lista = cheque ? gCheq : arca ? gArca : gCuit;
+  $('hojaTitulo').textContent = cheque ? 'Cheques' : arca ? 'Datos ARCA' : 'CUIT';
   $('verGuardados').classList.toggle('activa', hojaVista === 'guardados');
   $('verRecientes').classList.toggle('activa', hojaVista === 'recientes');
   const f = $('hojaBuscar').value.trim();
   let html = '';
   if (hojaVista === 'guardados') {
-    const datos = cheque ? gCheq : gCuit;
-    const vis = datos.map((g, i) => ({ g, i })).filter(({ g }) => !f || coincide(cheque ? `${g.banco} ${tres(g.codigo)} ${g.nro} ${g.suc} ${g.cta} ${g.nota} ${g.resultado}` : `${g.cuit} ${g.nombre} ${g.nota}`, f));
-    html = vis.map(({ g, i }) => cheque
-      ? `<div class="g ${g.alerta ? 'alerta' : ''}" data-i="${i}"><div class="txt"><div class="t1">Cheque ${esc(g.nro)} · ${esc(g.banco)}</div>
-          <div class="t2">${g.suc ? 'Suc. ' + esc(g.suc) + ' · ' : ''}${g.cta ? 'Cuenta ' + esc(g.cta) + ' · ' : ''}${esc(g.resultado)} · ${esc(g.ultima)}</div>${g.nota ? `<div class="nota">${esc(g.nota)}</div>` : ''}</div>
-          <button class="quitar" data-q="${i}">Quitar</button></div>`
-      : `<div class="g ${g.alerta ? 'alerta' : ''}" data-i="${i}"><div class="txt"><div class="t1">${esc(g.nombre || 'Sin nombre')}</div>
-          <div class="t2">${esc(g.cuit)} · Cheques rech.: ${esc(g.cheques)} · Sit. ${esc(g.situacion)}</div>${g.nota ? `<div class="nota">${esc(g.nota)}</div>` : ''}</div>
+    const texto = g => cheque ? `${g.banco} ${tres(g.codigo)} ${g.nro} ${g.suc} ${g.cta} ${g.nota} ${g.resultado}` : arca ? `${g.cuit} ${g.nombre} ${g.nota} ${g.domicilio}` : `${g.cuit} ${g.nombre} ${g.nota}`;
+    const vis = lista.map((g, i) => ({ g, i })).filter(({ g }) => !f || coincide(texto(g), f));
+    html = vis.map(({ g, i }) => `<div class="g ${g.alerta ? 'alerta' : ''}" data-i="${i}"><div class="txt">${cheque
+      ? `<div class="t1">Cheque ${esc(g.nro)} · ${esc(g.banco)}</div>
+          <div class="t2">${g.suc ? 'Suc. ' + esc(g.suc) + ' · ' : ''}${g.cta ? 'Cuenta ' + esc(g.cta) + ' · ' : ''}${esc(g.resultado)} · ${esc(g.ultima)}</div>`
+      : arca
+      ? `<div class="t1">${esc(g.nombre || 'Sin nombre')}</div>
+          <div class="t2">${esc(g.cuit)} · ${esc([g.estado, g.iva].filter(Boolean).join(' · '))}</div>${g.domicilio ? `<div class="t2">${esc(g.domicilio)}</div>` : ''}`
+      : `<div class="t1">${esc(g.nombre || 'Sin nombre')}</div>
+          <div class="t2">${esc(g.cuit)} · Cheques rech.: ${esc(g.cheques)} · Sit. ${esc(g.situacion)}</div>`}
+          ${g.nota ? `<div class="nota">${esc(g.nota)}</div>` : ''}</div>
           <button class="quitar" data-q="${i}">Quitar</button></div>`).join('');
-    if (!vis.length) html = `<div class="vacio">${datos.length ? 'Nada coincide con la búsqueda.' : 'Todavía no guardaste nada.<br>Consultá y tocá “Guardar”.'}</div>`;
+    if (!vis.length) html = `<div class="vacio">${lista.length ? 'Nada coincide con la búsqueda.' : 'Todavía no guardaste nada.<br>Consultá y tocá “Guardar”.'}</div>`;
   } else {
-    const vis = recientes.map((r, i) => ({ r, i })).filter(({ r }) => r.tipo === (cheque ? 'cheque' : 'cuit') && (!f || coincide(`${r.t1} ${r.t2}`, f)));
+    const vis = recientes.map((r, i) => ({ r, i })).filter(({ r }) => r.tipo === tipo && (!f || coincide(`${r.t1} ${r.t2}`, f)));
     html = vis.map(({ r, i }) => `<div class="g ${r.alerta ? 'alerta' : ''}" data-r="${i}"><div class="txt"><div class="t1">${esc(r.t1)}</div><div class="t2">${esc(r.t2)}</div><div class="t2">${esc(r.fecha)}</div></div></div>`).join('')
       || `<div class="vacio">Sin consultas todavía.</div>`;
   }
@@ -991,32 +1032,35 @@ function pintarHoja() {
   cuerpo.innerHTML = html;
   cuerpo.querySelectorAll('[data-q]').forEach(b => b.onclick = ev => {
     ev.stopPropagation();
-    const lista = cheque ? gCheq : gCuit;
     const g = lista[+b.dataset.q];
     if (!confirm(`¿Quitar ${cheque ? 'el cheque ' + g.nro : g.nombre || g.cuit} de los guardados?`)) return;
     lista.splice(+b.dataset.q, 1); grabar(); pintarHoja();
   });
-  cuerpo.querySelectorAll('[data-i]').forEach(d => d.onclick = () => abrirGuardado((cheque ? gCheq : gCuit)[+d.dataset.i], cheque));
+  cuerpo.querySelectorAll('[data-i]').forEach(d => d.onclick = () => abrirGuardado(lista[+d.dataset.i], tipo));
   cuerpo.querySelectorAll('[data-r]').forEach(d => d.onclick = () => {
     const r = recientes[+d.dataset.r];
-    abrirGuardado(r.tipo === 'cheque' ? { codigo: r.datos.codigo, banco: r.datos.banco, nro: r.datos.nro, suc: r.datos.suc, cta: r.datos.cta } : { cuit: r.datos.cuit }, r.tipo === 'cheque');
+    abrirGuardado(r.tipo === 'cheque' ? { codigo: r.datos.codigo, banco: r.datos.banco, nro: r.datos.nro, suc: r.datos.suc, cta: r.datos.cta } : { cuit: r.datos.cuit }, r.tipo);
   });
 }
-async function abrirGuardado(g, cheque) {
+async function abrirGuardado(g, tipo) {
   $('hoja').classList.remove('abierta');
-  if (cheque) {
+  if (tipo === 'cheque') {
     irA('cheque');
     await cargarBancos();
     elegirBanco(bancos?.find(b => b.codigo === +g.codigo) || { codigo: +g.codigo, nombre: g.banco });
     $('nroCheque').value = g.nro; $('sucursal').value = g.suc || ''; $('cuenta').value = g.cta || '';
     consultarCheque();
+  } else if (tipo === 'arca') {
+    irA('arca');
+    $('cuitArca').value = g.cuit;
+    consultarArca();
   } else {
     irA('cuit');
     $('cuit').value = g.cuit;
     consultarCuit();
   }
 }
-$('btnGuardados').onclick = () => abrirHoja(document.body.classList.contains('cheque') ? 'cheque' : 'cuit');
+$('btnGuardados').onclick = () => abrirHoja(document.body.classList.contains('cheque') ? 'cheque' : document.body.classList.contains('arca') ? 'arca' : 'cuit');
 $('hojaCerrar').onclick = () => $('hoja').classList.remove('abierta');
 $('hoja').onclick = e => { if (e.target === $('hoja')) $('hoja').classList.remove('abierta'); };
 $('verGuardados').onclick = () => { hojaVista = 'guardados'; pintarHoja(); };
