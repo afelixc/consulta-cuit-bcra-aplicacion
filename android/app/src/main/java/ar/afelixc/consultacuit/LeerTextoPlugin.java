@@ -19,7 +19,7 @@ import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
 
 /**
  * Lee el texto impreso de una foto (por ejemplo el recuadro de números del cheque) con el lector de Google
- * (ML Kit), que viene dentro de la app y funciona sin internet.
+ * (ML Kit, por los Servicios de Google del teléfono; funciona sin internet una vez bajado).
  * Desde la pantalla: LeerTexto.leer({ imagen: "<jpeg en base64>" }) → { texto, lineas: [{ texto, x, y, ancho, alto }] }
  */
 @CapacitorPlugin(name = "LeerTexto")
