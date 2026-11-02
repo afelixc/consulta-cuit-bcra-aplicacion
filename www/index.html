@@ -147,6 +147,30 @@
   .paso-t:first-child { margin-top: 0; }
   .paso-t.hecho { color: var(--ok); }
   .btn.chico { padding: 9px 12px; font-size: 14px; }
+  .modos { display: flex; gap: 6px; margin-bottom: 12px; }
+  .modos button { flex: 1; border: 0; border-radius: 10px; padding: 11px 6px; font-weight: 700; font-size: 15px; background: var(--medio); color: var(--color); }
+  .modos button.activa { background: var(--color); color: #fff; }
+  .visor { position: relative; width: 100%; aspect-ratio: 4 / 3; background: #111; border-radius: 12px; overflow: hidden; }
+  .visor video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .visor .guia { position: absolute; left: 4%; right: 4%; top: 42%; height: 16%; border: 3px solid #fff; border-radius: 8px; box-shadow: 0 0 0 999px rgba(0,0,0,.45); }
+  .visor .guia.leyendo { border-color: #7CE0A0; }
+  .visor .guia-texto { position: absolute; left: 0; right: 0; top: 60%; text-align: center; color: #fff; font-size: 13px; font-weight: 600; padding: 8px; }
+  .visor .sin-camara { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff; text-align: center; padding: 20px; font-size: 14px; }
+  .leido { background: var(--verde-claro); color: var(--verde); border-radius: 10px; padding: 9px 12px; font-weight: 700; font-size: 14px; margin-bottom: 10px; }
+  .constancia { width: 720px; background: #fff; color: #000; font-family: Arial, Helvetica, sans-serif; font-size: 12.5px; line-height: 1.35; padding: 26px 30px; box-sizing: border-box; }
+  .constancia .ct-cab { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #000; padding-bottom: 8px; }
+  .constancia .ct-titulo { font-size: 21px; font-weight: 700; letter-spacing: .5px; }
+  .constancia .ct-fecha { font-size: 11px; text-align: right; }
+  .constancia .ct-nombre { font-size: 18px; font-weight: 700; margin-top: 16px; text-transform: uppercase; }
+  .constancia .ct-cuit { font-size: 15px; font-weight: 700; margin-top: 4px; }
+  .constancia .ct-linea { margin-top: 3px; }
+  .constancia .ct-sec { background: #D9D9D9; font-weight: 700; font-size: 11.5px; text-transform: uppercase; padding: 4px 7px; margin-top: 16px; }
+  .constancia table { width: 100%; border-collapse: collapse; margin-top: 2px; }
+  .constancia td { padding: 4px 7px; border-bottom: 1px solid #E2E2E2; vertical-align: top; }
+  .constancia td.der { text-align: right; white-space: nowrap; width: 150px; }
+  .constancia td.et { font-weight: 700; width: 120px; white-space: nowrap; }
+  .constancia .ct-pie { margin-top: 22px; border-top: 1px solid #000; padding-top: 8px; font-size: 10.5px; color: #333; }
+  .constancia .ct-ejemplo { border: 2px solid #C00; color: #C00; font-weight: 700; text-align: center; padding: 4px; margin-bottom: 10px; }
   .cert-ok { color: var(--ok); font-weight: 700; font-size: 14px; }
   .hoja .copia-pie { padding: 8px 16px calc(12px + env(safe-area-inset-bottom)); font-size: 13px; color: var(--gris); border-top: 1px solid var(--borde); text-align: center; }
   .hoja .copia-pie button { border: 0; background: none; color: var(--color); font-weight: 700; font-size: 13px; padding: 4px 6px; text-decoration: underline; }
@@ -192,7 +216,18 @@
 
   <!-- Solapa Cheques -->
   <section id="pagCheq" hidden>
-    <div class="tarjeta no-imprimir">
+    <div class="modos no-imprimir"><button id="modoManual" class="activa">✍ Ingresar a mano</button><button id="modoEscanear">📷 Escanear cheque</button></div>
+    <div class="tarjeta no-imprimir" id="cheqEscanear" hidden>
+      <div class="visor"><video id="video" playsinline muted></video><div class="guia" id="guia"></div>
+        <div class="guia-texto">Poné la banda de números de abajo del cheque dentro del recuadro</div>
+        <div class="sin-camara" id="sinCamara" hidden></div></div>
+      <div class="ayuda" id="escEstado">Acercá el teléfono hasta que la banda ocupe todo el ancho del recuadro, con buena luz y sin sombras.</div>
+      <div class="acciones"><button class="btn sec" id="escFoto">Sacar foto</button><button class="btn sec" id="escImagen">Elegir imagen</button></div>
+      <input type="file" accept="image/*" capture="environment" id="escArchivo" hidden>
+      <input type="file" accept="image/*" id="escArchivo2" hidden>
+    </div>
+    <div class="tarjeta no-imprimir" id="cheqManual">
+      <div class="leido" id="cheqLeido" hidden></div>
       <label class="campo" for="banco">Banco <span>(nombre o código)</span></label>
       <input type="search" id="banco" autocomplete="off" placeholder="Ej: 11, 285, Macro, Credicoop">
       <div id="bancoEstado"></div>
@@ -251,6 +286,7 @@
 <script src="lib/html2canvas.min.js"></script>
 <script src="lib/jspdf.umd.min.js"></script>
 <script src="lib/forge.min.js"></script>
+<script src="lib/cmc7.js"></script>
 <script>
 'use strict';
 const API = 'https://api.bcra.gob.ar';
@@ -329,6 +365,8 @@ function irA(cual) {
   $('pagArca').hidden = !arca;
   document.querySelector('meta[name=theme-color]').content = cheque ? '#1E7A46' : arca ? '#5B2C83' : '#1F4E8C';
   if (cheque) cargarBancos();
+  if (!cheque) apagarCamara();
+  else if (!$('cheqEscanear').hidden) prenderCamara();
   if (arca) pintarConfigArca();
 }
 $('solCuit').onclick = () => irA('cuit');
@@ -598,6 +636,131 @@ $('btnCheq').onclick = consultarCheque;
 ['nroCheque', 'sucursal', 'cuenta'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') consultarCheque(); }));
 ['nroCheque', 'sucursal', 'cuenta'].forEach(id => $(id).addEventListener('focus', () => { $('bancoLista').hidden = true; }));
 
+// ---------- Escanear el cheque con la cámara ----------
+// Lee la banda CMC-7 (la fila de números de abajo del cheque) con lib/cmc7.js, sin internet.
+var camara = null, escaneando = false, ultimaLectura = '';   // var: irA() puede llamar a apagarCamara() antes de llegar acá
+
+function modoCheque(escanear) {
+  $('modoManual').classList.toggle('activa', !escanear);
+  $('modoEscanear').classList.toggle('activa', escanear);
+  $('cheqManual').hidden = escanear;
+  $('cheqEscanear').hidden = !escanear;
+  if (escanear) { $('resCheq').innerHTML = ''; prenderCamara(); } else apagarCamara();
+}
+
+async function prenderCamara() {
+  const sin = $('sinCamara');
+  sin.hidden = true;
+  $('escEstado').textContent = 'Acercá el teléfono hasta que la banda ocupe todo el ancho del recuadro, con buena luz y sin sombras.';
+  if (!navigator.mediaDevices?.getUserMedia) { sin.textContent = 'No se puede usar la cámara acá. Usá “Sacar foto” o “Elegir imagen”.'; sin.hidden = false; return; }
+  try {
+    camara = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } } });
+    const pista = camara.getVideoTracks()[0];
+    try { await pista.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }); } catch {}
+    if ($('cheqEscanear').hidden) { apagarCamara(); return; }
+    $('video').srcObject = camara;
+    await $('video').play();
+    escaneando = true; ultimaLectura = '';
+    buscarBanda();
+  } catch (e) {
+    sin.textContent = /Permission|NotAllowed/i.test(e?.name + e?.message)
+      ? 'La app no tiene permiso para usar la cámara. Dáselo en Ajustes del teléfono → Aplicaciones → Consulta CUIT → Permisos, o usá “Sacar foto”.'
+      : 'No se encontró una cámara. Usá “Sacar foto” o “Elegir imagen”.';
+    sin.hidden = false;
+  }
+}
+
+function apagarCamara() {
+  escaneando = false;
+  camara?.getTracks().forEach(t => t.stop());
+  camara = null;
+  $('video').srcObject = null;
+}
+
+// Recorta de la imagen de la cámara la zona del recuadro (un poco más alta, por si el cheque no está justo)
+function recorteGuia() {
+  const v = $('video'), vw = v.videoWidth, vh = v.videoHeight;
+  if (!vw || !vh) return null;
+  const caja = v.getBoundingClientRect(), g = $('guia').getBoundingClientRect();
+  const esc = Math.max(caja.width / vw, caja.height / vh);           // object-fit: cover
+  const ox = (caja.width - vw * esc) / 2, oy = (caja.height - vh * esc) / 2;
+  const extra = g.height * 0.4;
+  let x = (g.left - caja.left - ox) / esc, y = (g.top - extra - caja.top - oy) / esc;
+  let w = g.width / esc, h = (g.height + 2 * extra) / esc;
+  x = Math.max(0, x); y = Math.max(0, y); w = Math.min(vw - x, w); h = Math.min(vh - y, h);
+  const c = document.createElement('canvas');
+  c.width = Math.round(w); c.height = Math.round(h);
+  c.getContext('2d', { willReadFrequently: true }).drawImage(v, x, y, w, h, 0, 0, c.width, c.height);
+  return c;
+}
+
+function buscarBanda() {
+  if (!escaneando) return;
+  const c = recorteGuia();
+  const r = c && CMC7.leerCanvas(c);
+  $('guia').classList.toggle('leyendo', !!r);
+  if (r) {
+    // Se acepta cuando dos cuadros seguidos leen exactamente lo mismo
+    if (r.todo === ultimaLectura) { chequeLeido(r); return; }
+    ultimaLectura = r.todo;
+  }
+  setTimeout(buscarBanda, 120);
+}
+
+// Foto sacada con la cámara del teléfono o imagen elegida (en la PC, por ejemplo un cheque escaneado)
+async function leerFoto(ev) {
+  const f = ev.target.files?.[0];
+  ev.target.value = '';
+  if (!f) return;
+  $('escEstado').textContent = 'Leyendo la foto…';
+  const was = escaneando; escaneando = false;
+  try {
+    const img = await new Promise((ok, mal) => { const i = new Image(); i.onload = () => ok(i); i.onerror = mal; i.src = URL.createObjectURL(f); });
+    const max = 2400, k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+    const w = Math.round(img.naturalWidth * k), h = Math.round(img.naturalHeight * k);
+    let r = null;
+    // Se prueba derecha y, si no, girada (por si la foto se sacó con el cheque de costado o al revés)
+    for (const giro of [0, 90, 270, 180]) {
+      await new Promise(ok => setTimeout(ok, 0));
+      const c = document.createElement('canvas'), de_costado = giro % 180;
+      c.width = de_costado ? h : w; c.height = de_costado ? w : h;
+      const ctx = c.getContext('2d', { willReadFrequently: true });
+      ctx.translate(c.width / 2, c.height / 2); ctx.rotate(giro * Math.PI / 180);
+      ctx.drawImage(img, -w / 2, -h / 2, w, h);
+      if ((r = CMC7.leerCanvas(c))) break;
+    }
+    URL.revokeObjectURL(img.src);
+    if (r) { chequeLeido(r); return; }
+    $('escEstado').innerHTML = '<span class="rojo">No pude leer la banda en esa foto.</span> Sacala más cerca, derecha, con buena luz y que se vea entera la fila de números de abajo.';
+  } catch { $('escEstado').textContent = 'No se pudo abrir la imagen.'; }
+  if (was && camara) { escaneando = true; buscarBanda(); }
+}
+
+async function chequeLeido(r) {
+  apagarCamara();
+  navigator.vibrate?.(80);
+  modoCheque(false);
+  await cargarBancos();
+  const b = bancos?.find(x => x.codigo === +r.banco);
+  if (b) elegirBanco(b);
+  else { bancoSel = null; $('banco').value = String(+r.banco); $('bancoEstado').innerHTML = `<div class="banco-mal">✖ No encontré el banco ${r.banco}. Revisá el código.</div>`; }
+  $('sucursal').value = r.sucursal;
+  $('nroCheque').value = r.cheque;
+  $('cuenta').value = r.cuenta;
+  $('cheqLeido').innerHTML = `📷 Datos leídos del cheque. Revisá que coincidan con el papel.<br><span style="font-weight:400">Banco ${r.banco} · Sucursal ${r.sucursal} · CP ${r.cp} · Cheque ${r.cheque} · Cuenta ${r.cuenta}</span>`;
+  $('cheqLeido').hidden = false;
+  if (b) consultarCheque();
+}
+
+$('modoManual').onclick = () => modoCheque(false);
+$('modoEscanear').onclick = () => modoCheque(true);
+$('escFoto').onclick = () => $('escArchivo').click();
+$('escImagen').onclick = () => $('escArchivo2').click();
+$('escArchivo').onchange = leerFoto;
+$('escArchivo2').onchange = leerFoto;
+['banco', 'nroCheque', 'sucursal', 'cuenta'].forEach(id => $(id).addEventListener('input', () => { $('cheqLeido').hidden = true; }));
+document.addEventListener('visibilitychange', () => { if (document.hidden) apagarCamara(); else if (!$('cheqEscanear').hidden && !$('pagCheq').hidden) prenderCamara(); });
+
 // ---------- Compartir / copiar / PDF (con las funciones de Android) ----------
 const nativo = window.Capacitor?.Plugins || {};
 async function compartir(texto, titulo) {
@@ -615,8 +778,16 @@ async function copiar(texto) {
   } catch { aviso('No se pudo copiar'); }
 }
 // Arma un PDF con el informe que está en pantalla y abre "Compartir" (WhatsApp, mail, Drive, Archivos…)
-async function hacerPdf(titulo, boton) {
-  const tarjeta = boton.closest('.tarjeta');
+async function hacerPdf(titulo, boton, hoja) {
+  // hoja: HTML de una hoja aparte (ej. la constancia de ARCA). Si no hay, se usa la tarjeta de la pantalla.
+  let tarjeta = boton.closest('.tarjeta'), apartada = null;
+  if (hoja) {
+    apartada = document.createElement('div');
+    apartada.style.cssText = 'position:fixed;left:-3000px;top:0;width:720px';
+    apartada.innerHTML = hoja;
+    document.body.appendChild(apartada);
+    tarjeta = apartada.firstElementChild;
+  }
   boton.disabled = true;
   aviso('Armando el PDF…');
   document.body.classList.add('armando-pdf');
@@ -624,7 +795,7 @@ async function hacerPdf(titulo, boton) {
     tarjeta.dataset.pdf = '1';
     // Se dibuja con ancho de hoja (no de celular) para que la letra quede de tamaño normal
     const lienzo = await html2canvas(tarjeta, { scale: 2, backgroundColor: '#FFFFFF', windowWidth: 800,
-      onclone: doc => Object.assign(doc.querySelector('[data-pdf]').style, { width: '720px', maxWidth: 'none', boxShadow: 'none' }) });
+      onclone: doc => { Object.assign(doc.querySelector('[data-pdf]').style, { width: '720px', maxWidth: 'none', boxShadow: 'none' }); if (apartada) doc.querySelector('[data-pdf]').parentElement.style.left = '0'; } });
     const pdf = new jspdf.jsPDF({ unit: 'mm', format: 'a4' });
     const margen = 10, ancho = 210 - 2 * margen, altoPag = 297 - 2 * margen;
     const pxPorMm = lienzo.width / ancho, altoPx = Math.floor(altoPag * pxPorMm);
@@ -646,6 +817,7 @@ async function hacerPdf(titulo, boton) {
   } finally {
     document.body.classList.remove('armando-pdf');
     delete tarjeta.dataset.pdf;
+    apartada?.remove();
     boton.disabled = false;
   }
 }
@@ -986,13 +1158,6 @@ function mostrarArca(doc, cuit, ejemplo) {
   </div>`;
   res.innerHTML = h;
 
-  ultArca = [`CONSTANCIA DE INSCRIPCIÓN - ARCA${ejemplo ? ' (EJEMPLO)' : ''}`, `CUIT ${fmtCuit(cuit)}`, nombre,
-    `Estado: ${val(g, 'estadoClave')}${iva ? ' · IVA: ' + iva : ''}${catMono ? ' · Categoría ' + val(catMono, 'descripcionCategoria') : ''}`,
-    dom ? `Domicilio fiscal: ${direccion} - ${lugar}` : '',
-    actividades.length ? 'Actividades:\n' + actividades.map(a => `  · ${val(a, 'idActividad')} ${val(a, 'descripcionActividad')}${val(a, 'orden') === '1' ? ' (principal)' : ''}`).join('\n') : '',
-    impuestos.length ? 'Impuestos:\n' + impuestos.map(i => `  · ${val(i, 'descripcionImpuesto')}`).join('\n') : '',
-    errores.length ? 'Observaciones: ' + errores.join(' / ') : '',
-    `Fuente: ARCA - ${ahora()}`].filter(Boolean).join('\n');
   if (!ejemplo) {
     const resumen = { cuit: fmtCuit(cuit), nombre, estado: val(g, 'estadoClave'), iva: [iva, catMono && 'Cat. ' + val(catMono, 'descripcionCategoria')].filter(Boolean).join(' · '),
       domicilio: dom ? `${direccion} - ${lugar}` : '', ultima: ahora(), alerta: !activo };
@@ -1010,9 +1175,51 @@ function mostrarArca(doc, cuit, ejemplo) {
     $('chkArca').onchange = guardar;
     $('notaArca').onchange = () => { if ($('chkArca').checked) guardar(); };
   }
+  // Constancia con el formato de la que se baja de ARCA (para el PDF y para compartir)
+  const principal = actividades.find(a => val(a, 'orden') === '1') || actividades[0];
+  const secundarias = actividades.filter(a => a !== principal);
+  const nomen = a => val(a, 'nomenclador') ? ` (F-${val(a, 'nomenclador')})` : '';
+  const alta = el => { const v = val(el, 'periodo'); return /^\d{6}$/.test(v) ? `${v.slice(4)}-${v.slice(0, 4)}` : v; };
+  const fila = (a, b) => `<tr><td>${a}</td><td class="der">${b}</td></tr>`;
+  const datoCt = (e, v) => v ? `<tr><td class="et">${esc(e)}</td><td>${esc(v)}</td></tr>` : '';
+  const constancia = `<div class="constancia">
+    ${ejemplo ? '<div class="ct-ejemplo">EJEMPLO · DATOS INVENTADOS</div>' : ''}
+    <div class="ct-cab"><div class="ct-titulo">CONSTANCIA DE INSCRIPCIÓN</div><div class="ct-fecha">Datos de ARCA<br>al ${ahora()}</div></div>
+    <div class="ct-nombre">${esc(nombre || 'Sin nombre registrado')}</div>
+    <div class="ct-cuit">CUIT: ${fmtCuit(cuit)}</div>
+    <div class="ct-linea">Estado de la CUIT: <b>${esc(val(g, 'estadoClave') || 'sin estado')}</b>${iva ? ` &nbsp;·&nbsp; Condición frente al IVA: <b>${esc(iva.toUpperCase())}</b>` : ''}</div>
+    ${val(g, 'tipoPersona') ? `<div class="ct-linea">Tipo de persona: ${val(g, 'tipoPersona') === 'FISICA' ? 'PERSONA HUMANA' : val(g, 'tipoPersona') === 'JURIDICA' ? 'PERSONA JURÍDICA' : esc(val(g, 'tipoPersona'))}</div>` : ''}
+    ${catMono ? `<div class="ct-sec">Monotributo</div><table>${fila(`Categoría ${esc(val(catMono, 'descripcionCategoria'))}`, val(catMono, 'periodo') ? 'Desde: ' + alta(catMono) : '')}</table>` : ''}
+    <div class="ct-sec">Impuestos / Regímenes nacionales registrados y fecha de alta</div>
+    <table>${impuestos.map(i => fila(esc(val(i, 'descripcionImpuesto')), val(i, 'periodo') ? 'Fecha de alta: ' + alta(i) : '')).join('')}
+      ${regimenes.map(r => fila(esc(val(r, 'descripcionRegimen')), val(r, 'periodo') ? 'Fecha de alta: ' + alta(r) : '')).join('')}
+      ${!impuestos.length && !regimenes.length ? fila('No registra', '') : ''}</table>
+    <div class="ct-sec">Actividades</div>
+    <table>${principal ? `<tr><td class="et">Principal</td><td>${esc(val(principal, 'idActividad'))}${nomen(principal)} ${esc(val(principal, 'descripcionActividad'))}</td><td class="der">${val(principal, 'periodo') ? 'Mes de inicio: ' + periodo(val(principal, 'periodo')) : ''}</td></tr>` : '<tr><td>No registra</td></tr>'}
+      ${secundarias.map((a, n) => `<tr><td class="et">${n ? '' : 'Secundaria(s)'}</td><td>${esc(val(a, 'idActividad'))}${nomen(a)} ${esc(val(a, 'descripcionActividad'))}</td><td class="der">${val(a, 'periodo') ? 'Mes de inicio: ' + periodo(val(a, 'periodo')) : ''}</td></tr>`).join('')}</table>
+    ${+val(g, 'mesCierre') || val(g, 'fechaContratoSocial') ? `<table style="margin-top:6px">${datoCt('Mes de cierre', +val(g, 'mesCierre') ? MESES[+val(g, 'mesCierre')].toUpperCase() : '')}${datoCt('Contrato social', val(g, 'fechaContratoSocial') && fechaIso(val(g, 'fechaContratoSocial')))}</table>` : ''}
+    <div class="ct-sec">Domicilio fiscal - ARCA</div>
+    <table>${dom ? datoCt('Dirección', direccion) + datoCt('Localidad', val(dom, 'localidad')) + datoCt('Código postal', val(dom, 'codPostal')) + datoCt('Provincia', prov.toUpperCase()) : '<tr><td>No informado</td></tr>'}</table>
+    ${val(hijo(g, 'dependencia'), 'descripcionDependencia') ? `<div class="ct-linea" style="margin-top:8px">Dependencia: ${esc(val(hijo(g, 'dependencia'), 'descripcionDependencia'))}</div>` : ''}
+    ${caract.length ? `<div class="ct-sec">Características</div><table>${caract.map(c => fila(esc(val(c, 'descripcionCaracterizacion')), '')).join('')}</table>` : ''}
+    ${errores.length ? `<div class="ct-sec">Observaciones de ARCA</div><table>${errores.map(e => fila(esc(e), '')).join('')}</table>` : ''}
+    <div class="ct-pie">Datos obtenidos del servicio oficial de ARCA (constancia de inscripción) el ${ahora()}, con la app Consulta CUIT.<br>
+      Es un resumen informativo: no reemplaza a la constancia oficial que se descarga de arca.gob.ar.</div>
+  </div>`;
+  ultArca = [`CONSTANCIA DE INSCRIPCIÓN${ejemplo ? ' (EJEMPLO)' : ''}`, (nombre || '').toUpperCase(), `CUIT: ${fmtCuit(cuit)}`,
+    `Estado: ${val(g, 'estadoClave')}${iva ? ' · IVA: ' + iva.toUpperCase() : ''}`,
+    catMono ? `Monotributo: categoría ${val(catMono, 'descripcionCategoria')}${val(catMono, 'periodo') ? ' desde ' + alta(catMono) : ''}` : '',
+    '', 'IMPUESTOS / REGÍMENES Y FECHA DE ALTA:', ...[...impuestos.map(i => `· ${val(i, 'descripcionImpuesto')}${val(i, 'periodo') ? ' - alta ' + alta(i) : ''}`),
+      ...regimenes.map(r => `· ${val(r, 'descripcionRegimen')}${val(r, 'periodo') ? ' - alta ' + alta(r) : ''}`)],
+    '', 'ACTIVIDADES:', principal ? `· Principal: ${val(principal, 'idActividad')}${nomen(principal)} ${val(principal, 'descripcionActividad')}${val(principal, 'periodo') ? ' - inicio ' + periodo(val(principal, 'periodo')) : ''}` : '· No registra',
+    ...secundarias.map(a => `· Secundaria: ${val(a, 'idActividad')}${nomen(a)} ${val(a, 'descripcionActividad')}${val(a, 'periodo') ? ' - inicio ' + periodo(val(a, 'periodo')) : ''}`),
+    +val(g, 'mesCierre') ? `Mes de cierre: ${MESES[+val(g, 'mesCierre')]}` : '',
+    '', 'DOMICILIO FISCAL:', dom ? `${direccion}, ${[val(dom, 'localidad'), val(dom, 'codPostal') && 'CP ' + val(dom, 'codPostal'), prov].filter(Boolean).join(', ')}` : 'No informado',
+    errores.length ? '\nObservaciones: ' + errores.join(' / ') : '',
+    '', `Datos de ARCA al ${ahora()}`].filter(x => x !== null && x !== undefined && x !== false).join('\n').replace(/\n{3,}/g, '\n\n');
   $('compArca').onclick = () => compartir(ultArca, `Constancia ${fmtCuit(cuit)}`);
   $('copArca').onclick = () => copiar(ultArca);
-  $('pdfArca').onclick = () => hacerPdf(`Constancia ARCA ${fmtCuit(cuit)} ${nombre}`, $('pdfArca'));
+  $('pdfArca').onclick = () => hacerPdf(`Constancia de inscripcion ${fmtCuit(cuit)} ${nombre}`, $('pdfArca'), constancia);
   res.scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -1229,6 +1436,7 @@ buscarActualizacion();
 // Botón "atrás" de Android: primero cierra la ventana de guardados
 window.Capacitor?.Plugins?.App?.addListener?.('backButton', ({ canGoBack }) => {
   if ($('hoja').classList.contains('abierta')) $('hoja').classList.remove('abierta');
+  else if (!$('pagCheq').hidden && !$('cheqEscanear').hidden) modoCheque(false);
   else if (canGoBack) history.back();
   else window.Capacitor.Plugins.App.exitApp();
 });
