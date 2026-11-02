@@ -76,7 +76,7 @@
     return grupos.map(gr => {
       if (gr.length !== 6) return gr.length > 1 ? '?' : '';
       const o = [...gr].sort((a, b) => a - b);
-      if (o[4] < o[3] * 1.25) return '?';
+      if (o[4] < o[3] * 1.2) return '?';
       const lim = (o[3] + o[4]) / 2;
       return TABLA[gr.map(v => (v > lim ? '1' : '0')).join('')] || '|';
     }).join('');
@@ -84,29 +84,58 @@
 
   // Separa los 29 números en banco (3), sucursal (3), código postal (4), cheque (8) y cuenta (11)
   function separar(texto) {
-    const m = texto.match(/\d[\d|]*\d/);
-    if (!m || /\?/.test(m[0])) return null;
-    const num = m[0].replace(/\|/g, '');
-    if (num.length !== 29) return null;
+    const num = (texto.match(/\d[\d|]*\d/g) || []).map(t => t.replace(/\|/g, '')).find(t => t.length === 29);
+    if (!num) return null;
     return { banco: num.slice(0, 3), sucursal: num.slice(3, 6), cp: num.slice(6, 10), cheque: num.slice(10, 18), cuenta: num.slice(18), todo: num };
   }
 
-  const ANGULOS = [];
-  for (let a = -5; a <= 5; a += 0.5) ANGULOS.push(a * Math.PI / 180);
+  const grados = (de, a, paso) => { const r = []; for (let x = de; x <= a + 1e-9; x += paso) r.push(x * Math.PI / 180); return r; };
+  const GRUESO = grados(-6, 6, 1);
 
-  // g: escala de grises (Uint8Array) de w × h. Prueba franjas a distintas alturas y ángulos.
-  // Devuelve los datos cuando dos lecturas coinciden (o la única lectura válida), o null.
+  // g: escala de grises (Uint8Array) de w × h (una foto entera del cheque o solo la zona de la banda).
+  // 1) recorre franjas horizontales y se queda con las que tienen rayas más nítidas (ahí está la banda);
+  // 2) en esas prueba ángulos finos y lee. Devuelve los datos cuando dos lecturas coinciden, o la mejor, o null.
+  // Imagen a la mitad de tamaño (para buscar rápido dónde está la banda)
+  function mitad(g, w, h) {
+    const w2 = w >> 1, h2 = h >> 1, r = new Uint8Array(w2 * h2);
+    for (let y = 0; y < h2; y++) for (let x = 0; x < w2; x++) {
+      const i = 2 * y * w + 2 * x;
+      r[y * w2 + x] = (g[i] + g[i + 1] + g[i + w] + g[i + w + 1]) >> 2;
+    }
+    return r;
+  }
+
   function leerGris(g, w, h) {
-    const alto = Math.max(12, Math.round(w / 18));
+    // Para buscar la banda alcanza con la imagen achicada; para leerla se usa la original
+    let gb = g, wb = w, hb = h, k = 1;
+    while (wb > 2000) { gb = mitad(gb, wb, hb); wb >>= 1; hb >>= 1; k *= 2; }
+    const candidatas = [];
+    for (const div of [18, 34]) {
+      const alto = Math.max(12, Math.round(wb / div));
+      const ys = [];
+      if (hb <= alto * 1.8) ys.push(hb / 2);
+      else for (let y = alto / 2; y <= hb - alto / 2; y += alto / 3) ys.push(y);
+      for (const yc of ys) {
+        const y0 = Math.max(0, Math.round(yc - alto)), y1 = Math.min(hb, Math.round(yc + alto));
+        const u = otsu(gb.subarray(y0 * wb, y1 * wb));
+        let mejor = null;
+        for (const a of GRUESO) {
+          const n = nitidez(perfilFranja(gb, wb, hb, yc, alto, u, a));
+          if (!mejor || n > mejor.n) mejor = { n, a, yc: yc * k, alto: alto * k };
+        }
+        // el umbral de tinta se recalcula sobre la imagen original
+        const z0 = Math.max(0, Math.round(mejor.yc - mejor.alto)), z1 = Math.min(h, Math.round(mejor.yc + mejor.alto));
+        mejor.u = () => otsu(g.subarray(z0 * w, z1 * w));
+        candidatas.push(mejor);
+      }
+    }
+    candidatas.sort((x, y) => y.n - x.n);
     const votos = {};
-    const ys = [];
-    if (h <= alto * 1.8) ys.push(h / 2);
-    else for (let y = alto / 2; y <= h - alto / 2; y += alto / 3) ys.push(y);
-    for (const yc of ys) {
-      const y0 = Math.max(0, Math.round(yc - alto)), y1 = Math.min(h, Math.round(yc + alto));
-      const u = otsu(g.subarray(y0 * w, y1 * w));
-      const perfiles = ANGULOS.map(a => perfilFranja(g, w, h, yc, alto, u, a)).map(p => ({ p, n: nitidez(p) })).sort((a, b) => b.n - a.n);
-      for (const { p } of perfiles.slice(0, 3)) {
+    for (const c of candidatas.slice(0, 8)) {
+      c.u = c.u();
+      const finos = grados(-0.75, 0.75, 0.25).map(d => c.a + d)
+        .map(a => perfilFranja(g, w, h, c.yc, c.alto, c.u, a)).map(p => ({ p, n: nitidez(p) })).sort((x, y) => y.n - x.n);
+      for (const { p } of finos.slice(0, 3)) {
         for (const nivel of [0.15, 0.3]) {
           const r = separar(leerPerfil(p, nivel));
           if (r) {
@@ -116,7 +145,7 @@
         }
       }
     }
-    const v = Object.values(votos).sort((a, b) => b.n - a.n)[0];
+    const v = Object.values(votos).sort((x, y) => y.n - x.n)[0];
     return v ? v.r : null;
   }
 

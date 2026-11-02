@@ -150,12 +150,10 @@
   .modos { display: flex; gap: 6px; margin-bottom: 12px; }
   .modos button { flex: 1; border: 0; border-radius: 10px; padding: 11px 6px; font-weight: 700; font-size: 15px; background: var(--medio); color: var(--color); }
   .modos button.activa { background: var(--color); color: #fff; }
-  .visor { position: relative; width: 100%; aspect-ratio: 4 / 3; background: #111; border-radius: 12px; overflow: hidden; }
-  .visor video { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .visor .guia { position: absolute; left: 4%; right: 4%; top: 42%; height: 16%; border: 3px solid #fff; border-radius: 8px; box-shadow: 0 0 0 999px rgba(0,0,0,.45); }
-  .visor .guia.leyendo { border-color: #7CE0A0; }
-  .visor .guia-texto { position: absolute; left: 0; right: 0; top: 60%; text-align: center; color: #fff; font-size: 13px; font-weight: 600; padding: 8px; }
-  .visor .sin-camara { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff; text-align: center; padding: 20px; font-size: 14px; }
+  .foto-cheque { width: 100%; max-height: 220px; object-fit: contain; border-radius: 10px; background: #f2f2f2; margin-bottom: 10px; display: block; }
+  .campo-fila { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
+  .campo-fila .campo { flex: 1; }
+  .limpiar { border: 0; background: var(--medio); color: var(--color); border-radius: 14px; padding: 5px 12px; font-weight: 700; font-size: 13px; margin-bottom: 6px; }
   .leido { background: var(--verde-claro); color: var(--verde); border-radius: 10px; padding: 9px 12px; font-weight: 700; font-size: 14px; margin-bottom: 10px; }
   .constancia { width: 720px; background: #fff; color: #000; font-family: Arial, Helvetica, sans-serif; font-size: 12.5px; line-height: 1.35; padding: 26px 30px; box-sizing: border-box; }
   .constancia .ct-cab { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #000; padding-bottom: 8px; }
@@ -206,7 +204,7 @@
   <!-- Solapa CUIT -->
   <section id="pagCuit">
     <div class="tarjeta no-imprimir">
-      <label class="campo" for="cuit">CUIT / CUIL del titular</label>
+      <div class="campo-fila"><label class="campo" for="cuit">CUIT / CUIL del titular</label><button class="limpiar" id="limpiarCuit">✕ Limpiar</button></div>
       <input type="text" id="cuit" inputmode="numeric" autocomplete="off" placeholder="Ej: 20-12345678-9">
       <div class="ayuda">Con o sin guiones. También podés escribir un nombre o una nota de tus guardados.</div>
       <button class="btn principal" id="btnCuit">Consultar</button>
@@ -218,17 +216,16 @@
   <section id="pagCheq" hidden>
     <div class="modos no-imprimir"><button id="modoManual" class="activa">✍ Ingresar a mano</button><button id="modoEscanear">📷 Escanear cheque</button></div>
     <div class="tarjeta no-imprimir" id="cheqEscanear" hidden>
-      <div class="visor"><video id="video" playsinline muted></video><div class="guia" id="guia"></div>
-        <div class="guia-texto">Poné la banda de números de abajo del cheque dentro del recuadro</div>
-        <div class="sin-camara" id="sinCamara" hidden></div></div>
-      <div class="ayuda" id="escEstado">Acercá el teléfono hasta que la banda ocupe todo el ancho del recuadro, con buena luz y sin sombras.</div>
-      <div class="acciones"><button class="btn sec" id="escFoto">Sacar foto</button><button class="btn sec" id="escImagen">Elegir imagen</button></div>
+      <img class="foto-cheque" id="escVista" alt="" hidden>
+      <div class="ayuda" id="escEstado" style="margin-top:0">Sacale una foto al cheque <b>entero y derecho</b>, con buena luz. La app lee sola la fila de números de abajo y completa banco, sucursal, número de cheque y cuenta.</div>
+      <button class="btn principal" id="escFoto">📷 Sacar foto del cheque</button>
+      <div class="acciones"><button class="btn sec chico" id="escImagen">Elegir una foto guardada</button></div>
       <input type="file" accept="image/*" capture="environment" id="escArchivo" hidden>
       <input type="file" accept="image/*" id="escArchivo2" hidden>
     </div>
     <div class="tarjeta no-imprimir" id="cheqManual">
       <div class="leido" id="cheqLeido" hidden></div>
-      <label class="campo" for="banco">Banco <span>(nombre o código)</span></label>
+      <div class="campo-fila"><label class="campo" for="banco">Banco <span>(nombre o código)</span></label><button class="limpiar" id="limpiarCheq">✕ Limpiar</button></div>
       <input type="search" id="banco" autocomplete="off" placeholder="Ej: 11, 285, Macro, Credicoop">
       <div id="bancoEstado"></div>
       <ul class="sugerencias" id="bancoLista" hidden></ul>
@@ -254,7 +251,7 @@
   <!-- Solapa ARCA (constancia de inscripción) -->
   <section id="pagArca" hidden>
     <div class="tarjeta no-imprimir">
-      <label class="campo" for="cuitArca">CUIT / CUIL a consultar en ARCA</label>
+      <div class="campo-fila"><label class="campo" for="cuitArca">CUIT / CUIL a consultar en ARCA</label><button class="limpiar" id="limpiarArca">✕ Limpiar</button></div>
       <input type="text" id="cuitArca" inputmode="numeric" autocomplete="off" placeholder="Ej: 20-12345678-9">
       <div class="ayuda">Trae los datos de la constancia de inscripción: nombre, domicilio fiscal, actividades, impuestos y monotributo. También podés escribir un nombre o una nota de tus guardados.</div>
       <button class="btn principal" id="btnArca">Consultar en ARCA</button>
@@ -365,8 +362,6 @@ function irA(cual) {
   $('pagArca').hidden = !arca;
   document.querySelector('meta[name=theme-color]').content = cheque ? '#1E7A46' : arca ? '#5B2C83' : '#1F4E8C';
   if (cheque) cargarBancos();
-  if (!cheque) apagarCamara();
-  else if (!$('cheqEscanear').hidden) prenderCamara();
   if (arca) pintarConfigArca();
 }
 $('solCuit').onclick = () => irA('cuit');
@@ -636,111 +631,71 @@ $('btnCheq').onclick = consultarCheque;
 ['nroCheque', 'sucursal', 'cuenta'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') consultarCheque(); }));
 ['nroCheque', 'sucursal', 'cuenta'].forEach(id => $(id).addEventListener('focus', () => { $('bancoLista').hidden = true; }));
 
-// ---------- Escanear el cheque con la cámara ----------
+// ---------- Escanear el cheque con una foto ----------
 // Lee la banda CMC-7 (la fila de números de abajo del cheque) con lib/cmc7.js, sin internet.
-var camara = null, escaneando = false, ultimaLectura = '';   // var: irA() puede llamar a apagarCamara() antes de llegar acá
-
-function modoCheque(escanear) {
+function modoCheque(escanear, abrirCamara) {
   $('modoManual').classList.toggle('activa', !escanear);
   $('modoEscanear').classList.toggle('activa', escanear);
   $('cheqManual').hidden = escanear;
   $('cheqEscanear').hidden = !escanear;
-  if (escanear) { $('resCheq').innerHTML = ''; prenderCamara(); } else apagarCamara();
-}
-
-async function prenderCamara() {
-  const sin = $('sinCamara');
-  sin.hidden = true;
-  $('escEstado').textContent = 'Acercá el teléfono hasta que la banda ocupe todo el ancho del recuadro, con buena luz y sin sombras.';
-  if (!navigator.mediaDevices?.getUserMedia) { sin.textContent = 'No se puede usar la cámara acá. Usá “Sacar foto” o “Elegir imagen”.'; sin.hidden = false; return; }
-  try {
-    camara = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } } });
-    const pista = camara.getVideoTracks()[0];
-    try { await pista.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }); } catch {}
-    if ($('cheqEscanear').hidden) { apagarCamara(); return; }
-    $('video').srcObject = camara;
-    await $('video').play();
-    escaneando = true; ultimaLectura = '';
-    buscarBanda();
-  } catch (e) {
-    sin.textContent = /Permission|NotAllowed/i.test(e?.name + e?.message)
-      ? 'La app no tiene permiso para usar la cámara. Dáselo en Ajustes del teléfono → Aplicaciones → Consulta CUIT → Permisos, o usá “Sacar foto”.'
-      : 'No se encontró una cámara. Usá “Sacar foto” o “Elegir imagen”.';
-    sin.hidden = false;
+  if (escanear) {
+    $('resCheq').innerHTML = '';
+    if (abrirCamara) $('escArchivo').click();     // va directo a la cámara
   }
 }
 
-function apagarCamara() {
-  escaneando = false;
-  camara?.getTracks().forEach(t => t.stop());
-  camara = null;
-  $('video').srcObject = null;
-}
+const pausa = () => new Promise(ok => setTimeout(ok, 30));
 
-// Recorta de la imagen de la cámara la zona del recuadro (un poco más alta, por si el cheque no está justo)
-function recorteGuia() {
-  const v = $('video'), vw = v.videoWidth, vh = v.videoHeight;
-  if (!vw || !vh) return null;
-  const caja = v.getBoundingClientRect(), g = $('guia').getBoundingClientRect();
-  const esc = Math.max(caja.width / vw, caja.height / vh);           // object-fit: cover
-  const ox = (caja.width - vw * esc) / 2, oy = (caja.height - vh * esc) / 2;
-  const extra = g.height * 0.4;
-  let x = (g.left - caja.left - ox) / esc, y = (g.top - extra - caja.top - oy) / esc;
-  let w = g.width / esc, h = (g.height + 2 * extra) / esc;
-  x = Math.max(0, x); y = Math.max(0, y); w = Math.min(vw - x, w); h = Math.min(vh - y, h);
-  const c = document.createElement('canvas');
-  c.width = Math.round(w); c.height = Math.round(h);
-  c.getContext('2d', { willReadFrequently: true }).drawImage(v, x, y, w, h, 0, 0, c.width, c.height);
+// Dibuja la foto (achicada a un tamaño que alcanza para leer) girada "giro" grados
+function fotoEnCanvas(img, giro) {
+  const max = 3200, k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+  const w = Math.round(img.naturalWidth * k), h = Math.round(img.naturalHeight * k);
+  const c = document.createElement('canvas'), costado = giro % 180;
+  c.width = costado ? h : w; c.height = costado ? w : h;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.translate(c.width / 2, c.height / 2); ctx.rotate(giro * Math.PI / 180);
+  ctx.drawImage(img, -w / 2, -h / 2, w, h);
   return c;
 }
 
-function buscarBanda() {
-  if (!escaneando) return;
-  const c = recorteGuia();
-  const r = c && CMC7.leerCanvas(c);
-  $('guia').classList.toggle('leyendo', !!r);
-  if (r) {
-    // Se acepta cuando dos cuadros seguidos leen exactamente lo mismo
-    if (r.todo === ultimaLectura) { chequeLeido(r); return; }
-    ultimaLectura = r.todo;
-  }
-  setTimeout(buscarBanda, 120);
-}
-
-// Foto sacada con la cámara del teléfono o imagen elegida (en la PC, por ejemplo un cheque escaneado)
 async function leerFoto(ev) {
   const f = ev.target.files?.[0];
   ev.target.value = '';
   if (!f) return;
-  $('escEstado').textContent = 'Leyendo la foto…';
-  const was = escaneando; escaneando = false;
+  const est = $('escEstado'), vista = $('escVista');
+  if (vista.src) URL.revokeObjectURL(vista.src);
+  vista.src = URL.createObjectURL(f); vista.hidden = false;
+  est.innerHTML = '<b>Leyendo los números del cheque…</b> (unos segundos)';
+  $('escFoto').disabled = $('escImagen').disabled = true;
+  await cargarBancos();
+  let r = null;
   try {
-    const img = await new Promise((ok, mal) => { const i = new Image(); i.onload = () => ok(i); i.onerror = mal; i.src = URL.createObjectURL(f); });
-    const max = 2400, k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
-    const w = Math.round(img.naturalWidth * k), h = Math.round(img.naturalHeight * k);
-    let r = null;
-    // Se prueba derecha y, si no, girada (por si la foto se sacó con el cheque de costado o al revés)
-    for (const giro of [0, 90, 270, 180]) {
-      await new Promise(ok => setTimeout(ok, 0));
-      const c = document.createElement('canvas'), de_costado = giro % 180;
-      c.width = de_costado ? h : w; c.height = de_costado ? w : h;
-      const ctx = c.getContext('2d', { willReadFrequently: true });
-      ctx.translate(c.width / 2, c.height / 2); ctx.rotate(giro * Math.PI / 180);
-      ctx.drawImage(img, -w / 2, -h / 2, w, h);
-      if ((r = CMC7.leerCanvas(c))) break;
+    const img = await new Promise((ok, mal) => { const i = new Image(); i.onload = () => ok(i); i.onerror = mal; i.src = vista.src; });
+    // Si la foto es vertical, el cheque seguramente está de costado: se prueba girado primero
+    const giros = img.naturalHeight > img.naturalWidth ? [90, 270, 0] : [0, 90, 270];
+    let primera = null;
+    for (const giro of giros) {
+      await pausa();
+      const x = CMC7.leerCanvas(fotoEnCanvas(img, giro));
+      if (!x) continue;
+      primera = primera || x;
+      if (!bancos || bancos.some(b => b.codigo === +x.banco)) { r = x; break; }   // el banco tiene que existir
     }
-    URL.revokeObjectURL(img.src);
-    if (r) { chequeLeido(r); return; }
-    $('escEstado').innerHTML = '<span class="rojo">No pude leer la banda en esa foto.</span> Sacala más cerca, derecha, con buena luz y que se vea entera la fila de números de abajo.';
-  } catch { $('escEstado').textContent = 'No se pudo abrir la imagen.'; }
-  if (was && camara) { escaneando = true; buscarBanda(); }
+    r = r || primera;
+  } catch {}
+  $('escFoto').disabled = $('escImagen').disabled = false;
+  if (r) { chequeLeido(r); return; }
+  est.innerHTML = `<span class="rojo"><b>No pude leer los números de abajo del cheque.</b></span><br>Probá otra vez:
+    <ul style="margin:6px 0 0;padding-left:18px"><li>cheque apoyado en una mesa, derecho y entero en la foto</li><li>con buena luz, sin sombra ni reflejo</li><li>que se vea nítida la fila de números de abajo (tocá la pantalla para enfocar)</li></ul>`;
+  $('escFoto').textContent = '📷 Sacar otra foto';
 }
 
-async function chequeLeido(r) {
-  apagarCamara();
+function chequeLeido(r) {
   navigator.vibrate?.(80);
   modoCheque(false);
-  await cargarBancos();
+  $('escVista').hidden = true;
+  $('escFoto').textContent = '📷 Sacar foto del cheque';
+  $('escEstado').innerHTML = 'Sacale una foto al cheque <b>entero y derecho</b>, con buena luz. La app lee sola la fila de números de abajo y completa banco, sucursal, número de cheque y cuenta.';
   const b = bancos?.find(x => x.codigo === +r.banco);
   if (b) elegirBanco(b);
   else { bancoSel = null; $('banco').value = String(+r.banco); $('bancoEstado').innerHTML = `<div class="banco-mal">✖ No encontré el banco ${r.banco}. Revisá el código.</div>`; }
@@ -753,13 +708,22 @@ async function chequeLeido(r) {
 }
 
 $('modoManual').onclick = () => modoCheque(false);
-$('modoEscanear').onclick = () => modoCheque(true);
+$('modoEscanear').onclick = () => modoCheque(true, true);
 $('escFoto').onclick = () => $('escArchivo').click();
 $('escImagen').onclick = () => $('escArchivo2').click();
 $('escArchivo').onchange = leerFoto;
 $('escArchivo2').onchange = leerFoto;
 ['banco', 'nroCheque', 'sucursal', 'cuenta'].forEach(id => $(id).addEventListener('input', () => { $('cheqLeido').hidden = true; }));
-document.addEventListener('visibilitychange', () => { if (document.hidden) apagarCamara(); else if (!$('cheqEscanear').hidden && !$('pagCheq').hidden) prenderCamara(); });
+
+// ---------- Botones Limpiar ----------
+$('limpiarCuit').onclick = () => { $('cuit').value = ''; $('resCuit').innerHTML = ''; ultCuit = null; $('cuit').focus(); };
+$('limpiarArca').onclick = () => { $('cuitArca').value = ''; $('resArca').innerHTML = ''; ultArca = null; $('cuitArca').focus(); };
+$('limpiarCheq').onclick = () => {
+  ['banco', 'nroCheque', 'sucursal', 'cuenta'].forEach(id => { $(id).value = ''; });
+  bancoSel = null; ultCheq = null;
+  $('bancoEstado').innerHTML = ''; $('bancoLista').hidden = true; $('cheqLeido').hidden = true; $('resCheq').innerHTML = '';
+  $('banco').focus();
+};
 
 // ---------- Compartir / copiar / PDF (con las funciones de Android) ----------
 const nativo = window.Capacitor?.Plugins || {};
