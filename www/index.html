@@ -261,8 +261,7 @@
     <div id="resArca"></div>
     <div class="tarjeta no-imprimir" id="arcaConfig"></div>
   </section>
-  <p class="pie no-imprimir" style="text-align:center">Datos: API oficial del BCRA ·
-    <a href="https://github.com/afelixc/consulta-cuit-bcra/releases/latest/download/Consulta-CUIT-BCRA-PC.zip" target="_blank">Descargar el programa para PC</a><br>
+  <p class="pie no-imprimir" style="text-align:center">Datos: API oficial del Banco Central de la República Argentina<br>
     Creada por AFC · Uso libre y sin fines de lucro</p>
 </main>
 
@@ -744,13 +743,12 @@ function chequeLeido(r) {
   $('sucursal').value = r.sucursal;
   $('nroCheque').value = r.cheque;
   $('cuenta').value = r.cuenta;
-  $('cheqLeido').innerHTML = `📷 Datos leídos del cheque. Revisá que coincidan con el papel.<br><span style="font-weight:400">Banco ${r.banco} · Sucursal ${r.sucursal} · CP ${r.cp} · Cheque ${r.cheque}${r.cuenta ? ' · Cuenta ' + r.cuenta : ' · <b>no pude leer la cuenta: escribila</b>'}</span>`;
+  $('cheqLeido').innerHTML = `📷 Datos leídos del cheque. Revisá que coincidan con el papel y tocá <b>Consultar</b>.<br><span style="font-weight:400">Banco ${r.banco} · Sucursal ${r.sucursal} · CP ${r.cp} · Cheque ${r.cheque}${r.cuenta ? ' · Cuenta ' + r.cuenta : ' · <b>no pude leer la cuenta: escribila</b>'}</span>`;
   $('cheqLeido').hidden = false;
-  if (b) consultarCheque();
 }
 
 $('modoManual').onclick = () => modoCheque(false);
-$('modoEscanear').onclick = () => modoCheque(true, true);
+$('modoEscanear').onclick = () => modoCheque(true);
 $('escFoto').onclick = () => $('escArchivo').click();
 $('escImagen').onclick = () => $('escArchivo2').click();
 $('escArchivo').onchange = leerFoto;
