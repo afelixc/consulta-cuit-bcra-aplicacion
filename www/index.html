@@ -146,6 +146,8 @@
   .paso-t { font-weight: 800; color: var(--violeta); margin-top: 14px; font-size: 15px; }
   .paso-t:first-child { margin-top: 0; }
   .paso-t.hecho { color: var(--ok); }
+  .sub-paso { font-weight: 700; color: var(--texto); margin-top: 12px; font-size: 14px; background: var(--claro); border-radius: 8px; padding: 6px 10px; }
+  .sub-paso span { font-weight: 400; color: var(--gris); }
   .btn.chico { padding: 9px 12px; font-size: 14px; }
   .modos { display: flex; gap: 6px; margin-bottom: 12px; }
   .modos button { flex: 1; border: 0; border-radius: 10px; padding: 11px 6px; font-weight: 700; font-size: 15px; background: var(--medio); color: var(--color); }
@@ -828,15 +830,33 @@ function pintarConfigArca() {
     caja.innerHTML = `<div class="paso-t hecho">✔ Paso 1 · Pedido generado (CUIT ${esc(fmtCuit(arcaCfg.cuit))})</div>
       <div class="acciones"><button class="btn sec chico" id="arcaPedido">Guardar / enviar el pedido</button></div>
       <div class="paso-t">Paso 2 · En la página de ARCA (con clave fiscal)</div>
+      <div class="ayuda" style="margin-top:4px">Se puede hacer desde el navegador del teléfono o desde una computadora (si usás la compu, mandate antes el archivo del pedido con el botón de arriba). Escribí todo tal cual está en <b>negrita</b>.</div>
+      <div class="sub-paso">A · Tener el servicio de certificados <span>(solo la primera vez)</span></div>
       <ol class="pasos">
-        <li>Entrá a <b>arca.gob.ar</b> con tu CUIT y clave fiscal (nivel 3).</li>
-        <li>Abrí <b>Administración de Certificados Digitales</b>. Si no lo tenés, agregalo desde <b>Administrador de Relaciones de Clave Fiscal → Adherir servicio → ARCA → Servicios interactivos</b>.</li>
-        <li>Tocá <b>Agregar alias</b>, escribí <b>${ARCA.alias}</b>, elegí el archivo <b>pedido-certificado-arca.csr</b> y confirmá.</li>
-        <li>Tocá <b>Ver</b> en el alias ${ARCA.alias} y <b>descargá el certificado</b> (archivo .crt).</li>
-        <li>Volvé a <b>Administrador de Relaciones de Clave Fiscal → Nueva relación → Buscar → ARCA → WebServices</b> y elegí <b>Consulta de constancia de inscripción</b> (ws_sr_constancia_inscripcion).</li>
-        <li>En <b>Representante</b> tocá Buscar, elegí el certificado <b>${ARCA.alias}</b> y confirmá.</li>
+        <li>Entrá a <b>arca.gob.ar</b> → <b>Iniciar sesión</b>, con tu CUIT y tu clave fiscal (tiene que ser nivel 3 o más).</li>
+        <li>En el buscador de servicios escribí <b>certificados</b>. Si aparece <b>Administración de Certificados Digitales</b>, pasá a la parte B.</li>
+        <li>Si no aparece: entrá a <b>Administrador de Relaciones de Clave Fiscal</b> → <b>Adherir Servicio</b> → tocá el logo de <b>ARCA</b> → <b>Servicios interactivos</b> → <b>Administración de Certificados Digitales</b> → <b>Confirmar</b>.</li>
+        <li><b>Cerrá la sesión y volvé a entrar</b>. Si no salís y volvés a entrar, el servicio nuevo no aparece.</li>
+      </ol>
+      <div class="sub-paso">B · Crear el certificado</div>
+      <ol class="pasos" start="5">
+        <li>Entrá a <b>Administración de Certificados Digitales</b> y tocá <b>Agregar alias</b>.</li>
+        <li>En <b>Alias</b> escribí <b>${ARCA.alias}</b> (todo junto y en minúscula).</li>
+        <li>En <b>Archivo</b> tocá <b>Elegir archivo</b> (o Examinar) y elegí <b>pedido-certificado-arca.csr</b>, el del paso 1. Tocá <b>Agregar alias</b>.</li>
+        <li>En la lista aparece <b>${ARCA.alias}</b>: tocá <b>Ver</b> y después <b>Descargar</b>. Se baja un archivo que termina en <b>.crt</b> (queda en Descargas). Ese es el que vas a cargar en el paso 3.</li>
+      </ol>
+      <div class="sub-paso">C · Darle permiso al certificado <span>(el paso que más se olvida)</span></div>
+      <ol class="pasos" start="9">
+        <li>Volvé al inicio de ARCA y entrá a <b>Administrador de Relaciones de Clave Fiscal</b>.</li>
+        <li>Tocá <b>Nueva Relación</b>. Si te pregunta a quién representás, elegí tu nombre (tu CUIT).</li>
+        <li>Al lado de <b>Servicio</b> tocá <b>Buscar</b> → tocá el logo de <b>ARCA</b> → <b>WebServices</b> → elegí <b>Consulta de Constancia de Inscripción</b> (puede figurar como <b>ws_sr_constancia_inscripcion</b>). Te devuelve a la pantalla anterior.</li>
+        <li>Abajo, al lado de <b>Representante</b>, tocá <b>Buscar</b>.</li>
+        <li>Se abre un cuadrito: en la lista de <b>Computador Fiscal</b> elegí <b>${ARCA.alias}</b> y tocá <b>Confirmar</b>. <span class="naranja">No uses la opción de "Usuario" ni escribas un CUIT ahí.</span></li>
+        <li>Vas a ver un resumen con el servicio y el representante <b>${ARCA.alias}</b>. <b>Tocá Confirmar otra vez.</b> <span class="naranja">Si no tocás este segundo Confirmar, el permiso no queda hecho.</span></li>
+        <li>Aparece un comprobante (formulario 3283): listo, ya está. A veces tarda unos minutos en empezar a funcionar.</li>
       </ol>
       <div class="paso-t">Paso 3 · Cargar el certificado acá</div>
+      <div class="ayuda" style="margin-top:4px">Tocá el botón y elegí el archivo <b>.crt</b> que bajaste en el paso 8 (está en Descargas). Si lo bajaste en la compu, mandátelo al teléfono por WhatsApp o mail y guardalo.</div>
       <button class="btn principal" id="arcaCargar">Elegir el archivo .crt descargado</button>
       <input type="file" id="arcaArchivo" hidden>
       <div class="acciones"><button class="btn sec chico" id="arcaEjemplo">Ver un ejemplo</button><button class="btn sec chico" id="arcaRehacer">Empezar de nuevo</button></div>`;
@@ -977,7 +997,7 @@ async function ticketArca() {
 function errorArca(e) {
   const m = String(e?.message || e);
   if (/ya posee un TA valido/i.test(m)) return 'ARCA todavía tiene abierto un acceso anterior. Esperá unos minutos y probá de nuevo.';
-  if (/no autorizado|notAuthorized|computador no autorizado|cms.cert/i.test(m)) return 'ARCA no autorizó el certificado para este servicio. Revisá el paso 2: la relación con "Consulta de constancia de inscripción" para el certificado ' + ARCA.alias + '.';
+  if (/no autorizado|notAuthorized|computador no autorizado|cms.cert/i.test(m)) return 'ARCA no autorizó el certificado para este servicio. Hacé la parte C del paso 2 (darle permiso al certificado ' + ARCA.alias + ' para Consulta de Constancia de Inscripción), sin olvidarte del segundo Confirmar. Si recién lo hiciste, esperá unos minutos.';
   if (/expir|vencid/i.test(m)) return 'El certificado está vencido. Tocá "Cambiar certificado" y hacé los pasos de nuevo.';
   if (/No existe persona/i.test(m)) return 'ARCA no tiene registrado ese CUIT.';
   if (/timeout|timed out|failed to connect|unable to resolve|network/i.test(m)) return 'ARCA no responde. Revisá la conexión o probá en un rato.';
