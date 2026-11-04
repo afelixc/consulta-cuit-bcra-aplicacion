@@ -220,6 +220,7 @@
       <input type="text" id="cuit" inputmode="text" autocapitalize="off" spellcheck="false" autocomplete="off" placeholder="Ej: 20-12345678-9">
       <div class="ayuda">Con o sin guiones, o el nombre de un guardado.</div>
       <button class="btn principal" id="btnCuit">Consultar</button>
+      <div class="acciones"><button class="btn sec chico cuitonline" data-campo="cuit">🔎 No sé el CUIT: buscar por nombre en CUIT Online</button></div>
     </div>
     <div id="resCuit"></div>
   </section>
@@ -267,6 +268,7 @@
       <input type="text" id="cuitArca" inputmode="text" autocapitalize="off" spellcheck="false" autocomplete="off" placeholder="Ej: 20-12345678-9">
       <div class="ayuda">Con o sin guiones, o el nombre de un guardado. Trae la constancia de inscripción.</div>
       <button class="btn principal" id="btnArca">Consultar en ARCA</button>
+      <div class="acciones"><button class="btn sec chico cuitonline" data-campo="cuitArca">🔎 No sé el CUIT: buscar por nombre en CUIT Online</button></div>
     </div>
     <div id="resArca"></div>
     <div class="tarjeta no-imprimir" id="arcaConfig"></div>
@@ -785,6 +787,14 @@ async function compartir(texto, titulo) {
   } catch {}
 }
 document.addEventListener('click', e => { const b = e.target.closest('.copiar-cuit'); if (b) copiar(b.dataset.copiar); });
+// Abre CUIT Online (página externa, no oficial) en el navegador, buscando el nombre escrito
+document.addEventListener('click', e => {
+  const b = e.target.closest('.cuitonline'); if (!b) return;
+  let nombre = $(b.dataset.campo).value.trim();
+  if (!/[a-záéíóúñ]/i.test(nombre)) nombre = prompt('Escribí el nombre, apellido o razón social a buscar.\n\nSe abre la página CUIT Online (no es oficial). Ahí copiás el CUIT y lo pegás acá.') || '';
+  nombre = nombre.trim(); if (!nombre) return;
+  location.href = 'https://www.cuitonline.com/search.php?q=' + encodeURIComponent(nombre).replace(/%20/g, '+');
+});
 async function copiar(texto) {
   try {
     if (nativo.Clipboard) await nativo.Clipboard.write({ string: texto });
