@@ -45,7 +45,8 @@
   .solapa.cuit { background: var(--azul-medio); color: var(--azul); }
   .solapa.cheq { background: var(--verde-medio); color: var(--verde); }
   .solapa.arca { background: var(--violeta-medio); color: var(--violeta); }
-  .solapa.activa { background: var(--claro); font-size: 17px; font-weight: 800; padding: 14px 4px 12px; flex: 1.35; box-shadow: 0 -3px 8px rgba(0,0,0,.18); }
+  .solapa { flex: 1 1 0; min-width: 0; height: 44px; padding: 0 4px; font-size: 13px; line-height: 1.15; display: flex; align-items: center; justify-content: center; text-align: center; }
+  .solapa.activa { background: var(--claro); height: 60px; font-size: 16px; font-weight: 800; flex: 1.35 1 0; box-shadow: 0 -3px 8px rgba(0,0,0,.18); }
   .solapas { align-items: flex-end; }
   .solapa { transition: all .15s; }
   body:not(.cheque) .solapa.cuit.activa { color: var(--azul); }
@@ -206,7 +207,7 @@
   </div>
   <div class="solapas">
     <button class="solapa cuit activa" id="solCuit">Informe BCRA</button>
-    <button class="solapa cheq" id="solCheq">Cheques</button>
+    <button class="solapa cheq" id="solCheq">Cheques denunciados</button>
     <button class="solapa arca" id="solArca">Datos ARCA</button>
   </div>
 </header>
