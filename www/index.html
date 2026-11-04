@@ -45,7 +45,9 @@
   .solapa.cuit { background: var(--azul-medio); color: var(--azul); }
   .solapa.cheq { background: var(--verde-medio); color: var(--verde); }
   .solapa.arca { background: var(--violeta-medio); color: var(--violeta); }
-  .solapa.activa { background: var(--claro); }
+  .solapa.activa { background: var(--claro); font-size: 17px; font-weight: 800; padding: 14px 4px 12px; flex: 1.35; box-shadow: 0 -3px 8px rgba(0,0,0,.18); }
+  .solapas { align-items: flex-end; }
+  .solapa { transition: all .15s; }
   body:not(.cheque) .solapa.cuit.activa { color: var(--azul); }
   main { padding: 14px 16px 40px; max-width: 720px; margin: 0 auto; }
   .tarjeta { background: var(--blanco); border-radius: 14px; padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,.08); margin-bottom: 12px; }
@@ -171,6 +173,14 @@
   .constancia td.et { font-weight: 700; width: 120px; white-space: nowrap; }
   .constancia .ct-pie { margin-top: 22px; border-top: 1px solid #000; padding-top: 8px; font-size: 10.5px; color: #333; }
   .constancia .ct-ejemplo { border: 2px solid #C00; color: #C00; font-weight: 700; text-align: center; padding: 4px; margin-bottom: 10px; }
+  .copiar-cuit { border: 0; background: var(--medio); color: var(--color); border-radius: 8px; padding: 4px 8px; margin-left: 6px; vertical-align: middle; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
+  .copiar-cuit svg { width: 15px; height: 15px; }
+  details.config > summary { list-style: none; cursor: pointer; }
+  details.config > summary::-webkit-details-marker { display: none; }
+  details.config .abrir { display: inline-block; margin-top: 8px; color: var(--color); font-weight: 700; font-size: 14px; }
+  details.config[open] .abrir { display: none; }
+  details.ayuda-mas { margin-top: 8px; font-size: 13px; color: var(--gris); }
+  details.ayuda-mas summary { color: var(--color); font-weight: 700; cursor: pointer; }
   .cert-ok { color: var(--ok); font-weight: 700; font-size: 14px; }
   .hoja .copia-pie { padding: 8px 16px calc(12px + env(safe-area-inset-bottom)); font-size: 13px; color: var(--gris); border-top: 1px solid var(--borde); text-align: center; }
   .hoja .copia-pie button { border: 0; background: none; color: var(--color); font-weight: 700; font-size: 13px; padding: 4px 6px; text-decoration: underline; }
@@ -178,7 +188,7 @@
   .aviso.ver { opacity: .92; }
 
   /* Mientras se arma el PDF no se ven los botones ni la casilla de guardar */
-  body.armando-pdf .guardar, body.armando-pdf .acciones, body.armando-pdf #notaCuit, body.armando-pdf #notaCheq, body.armando-pdf #notaArca { display: none !important; }
+  body.armando-pdf .guardar, body.armando-pdf .acciones, body.armando-pdf #notaCuit, body.armando-pdf #notaCheq, body.armando-pdf #notaArca, body.armando-pdf .copiar-cuit { display: none !important; }
   @media print {
     header, .no-imprimir, .hoja, .guardar, .acciones { display: none !important; }
     body { background: #fff; }
@@ -207,8 +217,8 @@
   <section id="pagCuit">
     <div class="tarjeta no-imprimir">
       <div class="campo-fila"><label class="campo" for="cuit">CUIT / CUIL del titular</label><button class="limpiar" id="limpiarCuit">✕ Limpiar</button></div>
-      <input type="text" id="cuit" inputmode="numeric" autocomplete="off" placeholder="Ej: 20-12345678-9">
-      <div class="ayuda">Con o sin guiones. También podés escribir un nombre o una nota de tus guardados.</div>
+      <input type="text" id="cuit" inputmode="text" autocapitalize="off" spellcheck="false" autocomplete="off" placeholder="Ej: 20-12345678-9">
+      <div class="ayuda">Con o sin guiones, o el nombre de un guardado.</div>
       <button class="btn principal" id="btnCuit">Consultar</button>
     </div>
     <div id="resCuit"></div>
@@ -216,12 +226,12 @@
 
   <!-- Solapa Cheques -->
   <section id="pagCheq" hidden>
-    <div class="modos no-imprimir"><button id="modoManual" class="activa">✍ Ingresar datos manualmente</button><button id="modoEscanear">📷 Ingresar a través de imagen</button></div>
+    <div class="modos no-imprimir"><button id="modoManual" class="activa">⌨️ Ingresar datos manualmente</button><button id="modoEscanear">📷 Ingresar a través de imagen</button></div>
     <div class="tarjeta no-imprimir" id="cheqEscanear" hidden>
       <img class="foto-cheque" id="escVista" alt="" hidden>
-      <div class="ayuda" id="escEstado" style="margin-top:0">Sacale una foto al cheque <b>entero y derecho</b>, con buena luz. La app lee sola la fila de números de abajo y completa banco, sucursal, número de cheque y cuenta.</div>
+      <div class="ayuda" id="escEstado" style="margin-top:0">Foto del cheque <b>entero y derecho</b>, con buena luz. La app completa los datos sola.</div>
       <button class="btn principal" id="escFoto">📷 Sacar foto del cheque</button>
-      <div class="acciones"><button class="btn sec chico" id="escImagen">Elegir una foto guardada</button></div>
+      <div class="acciones"><button class="btn sec chico" id="escImagen">📁 Elegir una foto guardada</button></div>
       <input type="file" accept="image/*" capture="environment" id="escArchivo" hidden>
       <input type="file" accept="image/*" id="escArchivo2" hidden>
     </div>
@@ -244,7 +254,7 @@
           <input type="text" id="cuenta" inputmode="numeric" autocomplete="off" placeholder="Recomendado">
         </div>
       </div>
-      <div class="ayuda">En la banda de números de abajo del cheque van, en orden: banco (3) · sucursal (3) · código postal (4) · Nº de cheque (8) · Nº de cuenta (11).</div>
+      <details class="ayuda-mas"><summary>¿Dónde están estos números en el cheque?</summary>En la fila de números de abajo del cheque van, en orden: banco (3) · sucursal (3) · código postal (4) · Nº de cheque (8) · Nº de cuenta (11).</details>
       <button class="btn principal" id="btnCheq">Consultar</button>
     </div>
     <div id="resCheq"></div>
@@ -254,8 +264,8 @@
   <section id="pagArca" hidden>
     <div class="tarjeta no-imprimir">
       <div class="campo-fila"><label class="campo" for="cuitArca">CUIT / CUIL a consultar en ARCA</label><button class="limpiar" id="limpiarArca">✕ Limpiar</button></div>
-      <input type="text" id="cuitArca" inputmode="numeric" autocomplete="off" placeholder="Ej: 20-12345678-9">
-      <div class="ayuda">Trae los datos de la constancia de inscripción: nombre, domicilio fiscal, actividades, impuestos y monotributo. También podés escribir un nombre o una nota de tus guardados.</div>
+      <input type="text" id="cuitArca" inputmode="text" autocapitalize="off" spellcheck="false" autocomplete="off" placeholder="Ej: 20-12345678-9">
+      <div class="ayuda">Con o sin guiones, o el nombre de un guardado. Trae la constancia de inscripción.</div>
       <button class="btn principal" id="btnArca">Consultar en ARCA</button>
     </div>
     <div id="resArca"></div>
@@ -425,7 +435,7 @@ async function consultarCuit() {
   const clase = s => s <= 1 ? 'bien' : s === 2 ? 'ojo' : 'mal';
 
   let h = `<div class="tarjeta resultado">
-    <div class="sub">CUIT ${fmtCuit(cuit)}</div>
+    <div class="sub">CUIT ${fmtCuit(cuit)}<button class="copiar-cuit no-imprimir" data-copiar="${fmtCuit(cuit)}" aria-label="Copiar CUIT"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copiar</button></div>
     <h2>${nombre ? esc(nombre) : '<span class="naranja">No figura en la Central de Deudores</span>'}</h2>
     ${guardado?.nota ? `<div class="nota-guardada">Nota: ${esc(guardado.nota)}</div>` : ''}`;
 
@@ -437,7 +447,7 @@ async function consultarCuit() {
   }
 
   if (per) {
-    h += `<div class="estado ${clase(peor)}">Situación en bancos: ${peor} - ${SITUACIONES[peor]}<small>Último informe ${periodo(per.periodo)} · deuda total ${plata(deudaTotal)}</small></div>
+    h += `<div class="estado ${clase(peor)}">Situación en bancos: ${peor} - ${SITUACIONES[peor]}<small>Último informe ${periodo(per.periodo)} · deuda total ${plata(deudaTotal)}<br>Suma lo que debe en todos los bancos (tarjetas, préstamos, descubierto, etc.) a la fecha del informe.</small></div>
       <div class="lista">${ents.map(e => {
         const obs = [e.diasAtrasoPago > 0 ? `${e.diasAtrasoPago} días de atraso` : '', e.refinanciaciones ? 'refinanciada' : '',
           e.procesoJud ? 'PROCESO JUDICIAL' : '', e.situacionJuridica ? 'situación jurídica' : '', e.enRevision ? 'en revisión' : ''].filter(Boolean).join(', ');
@@ -736,7 +746,7 @@ function chequeLeido(r) {
   modoCheque(false);
   $('escVista').hidden = true;
   $('escFoto').textContent = '📷 Sacar foto del cheque';
-  $('escEstado').innerHTML = 'Sacale una foto al cheque <b>entero y derecho</b>, con buena luz. La app lee sola la fila de números de abajo y completa banco, sucursal, número de cheque y cuenta.';
+  $('escEstado').innerHTML = 'Foto del cheque <b>entero y derecho</b>, con buena luz. La app completa los datos sola.';
   const b = bancos?.find(x => x.codigo === +r.banco);
   if (b) elegirBanco(b);
   else { bancoSel = null; $('banco').value = String(+r.banco); $('bancoEstado').innerHTML = `<div class="banco-mal">✖ No encontré el banco ${r.banco}. Revisá el código.</div>`; }
@@ -774,6 +784,7 @@ async function compartir(texto, titulo) {
     else copiar(texto);
   } catch {}
 }
+document.addEventListener('click', e => { const b = e.target.closest('.copiar-cuit'); if (b) copiar(b.dataset.copiar); });
 async function copiar(texto) {
   try {
     if (nativo.Clipboard) await nativo.Clipboard.write({ string: texto });
@@ -851,9 +862,12 @@ function pintarConfigArca() {
   const ic = arcaCfg.cert && infoCert();
   if (ic) {
     const dias = Math.floor((ic.vence - Date.now()) / 864e5);
-    caja.innerHTML = `<div class="cert-ok">✔ Certificado de ARCA cargado (CUIT ${esc(fmtCuit(arcaCfg.cuit))})</div>
+    const sinCopia = !almacen.leer('ultimaCopia', '');
+    caja.innerHTML = `<details class="config"${dias < 30 ? ' open' : ''}><summary><div class="cert-ok">✔ Certificado de ARCA cargado (CUIT ${esc(fmtCuit(arcaCfg.cuit))})</div>
       <div class="sub ${dias < 30 ? 'rojo' : ''}">Vence el ${ic.vence.toLocaleDateString('es-AR')}${dias < 30 ? ` · ¡faltan ${Math.max(dias, 0)} días! Hay que renovarlo` : ''}</div>
-      <div class="acciones"><button class="btn sec chico" id="arcaEjemplo">Ver un ejemplo</button><button class="btn sec chico" id="arcaRehacer">Cambiar certificado</button></div>`;
+      ${sinCopia ? '<div class="sub naranja" style="font-weight:600">Todavía no hiciste la copia de seguridad</div>' : ''}
+      <span class="abrir">⚙ Opciones y copia de seguridad ▾</span></summary>
+      <div class="acciones"><button class="btn sec chico" id="arcaEjemplo">Ver un ejemplo</button><button class="btn sec chico" id="arcaRehacer">Cambiar certificado</button></div></details>`;
     $('arcaRehacer').onclick = () => borrarCertArca('¿Borrar el certificado cargado y armar uno nuevo?\n\nVas a tener que hacer de nuevo los pasos en la página de ARCA.');
   } else if (!arcaCfg.clave) {
     caja.innerHTML = `<div class="paso-t">Configurar ARCA (una sola vez)</div>
@@ -910,6 +924,8 @@ function pintarConfigArca() {
       : '¿Ya tenías la app configurada en otro teléfono? Tocá “Restaurar copia” y elegí el archivo de la copia.'}</div>
     ${arcaCfg.cert ? `<div class="sub ${ultimaCopia ? '' : 'naranja'}" style="margin-top:4px;font-weight:600">${ultimaCopia ? 'Última copia: ' + esc(ultimaCopia) : 'Todavía no hiciste ninguna copia'}</div>` : ''}
     <div class="acciones"><button class="btn sec chico" id="copiaHacer">Hacer copia</button><button class="btn sec chico" id="copiaRestaurar">Restaurar copia</button></div>`);
+  const det = caja.querySelector('details.config');
+  if (det) { while (det.nextSibling) det.appendChild(det.nextSibling); det.insertAdjacentHTML('beforeend', '<div style="text-align:center;margin-top:12px"><button class="limpiar" id="configCerrar">▴ Cerrar opciones</button></div>'); $('configCerrar').onclick = () => { det.open = false; }; }
   $('copiaHacer').onclick = hacerCopia;
   $('copiaRestaurar').onclick = () => $('copiaArchivo').click();
   $('arcaEjemplo').onclick = () => mostrarArca(xmlEjemploArca(), '20123456786', true);
@@ -1122,7 +1138,7 @@ function mostrarArca(doc, cuit, ejemplo) {
 
   let h = `<div class="tarjeta resultado arca">
     ${ejemplo ? '<div class="ejemplo">EJEMPLO · datos inventados para ver cómo sale</div>' : ''}
-    <div class="sub">CUIT ${fmtCuit(cuit)} · Constancia de inscripción ARCA</div>
+    <div class="sub">CUIT ${fmtCuit(cuit)}<button class="copiar-cuit no-imprimir" data-copiar="${fmtCuit(cuit)}" aria-label="Copiar CUIT"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copiar</button> · Constancia ARCA</div>
     <h2>${nombre ? esc(nombre) : '<span class="naranja">Sin nombre registrado</span>'}</h2>
     <div class="estado ${activo ? 'bien' : 'mal'}">${activo ? '✔' : '✖'} CUIT ${esc(val(g, 'estadoClave') || 'sin estado')}${iva ? `<small>Condición frente al IVA: ${esc(iva)}${catMono ? ' · Categoría ' + esc(val(catMono, 'descripcionCategoria')) : ''}</small>` : ''}</div>
     <div class="seccion arca">Datos generales</div>
