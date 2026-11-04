@@ -161,6 +161,8 @@
   .btn.chico { padding: 9px 12px; font-size: 14px; }
   .modos { display: flex; gap: 6px; margin-bottom: 12px; }
   .modos button { flex: 1; border: 0; border-radius: 10px; padding: 10px 6px; font-weight: 700; font-size: 14px; line-height: 1.25; background: var(--medio); color: var(--color); }
+  .modos button { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12.5px; text-align: left; min-height: 56px; }
+  .modos button .ico { font-size: 26px; line-height: 1; flex-shrink: 0; }
   .modos button.activa { background: var(--color); color: #fff; }
   .foto-cheque { width: 100%; max-height: 220px; object-fit: contain; border-radius: 10px; background: #f2f2f2; margin-bottom: 10px; display: block; }
   .campo-fila { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
@@ -227,7 +229,7 @@
   </div>
   <div class="solapas">
     <button class="solapa cuit activa" id="solCuit">Informe BCRA</button>
-    <button class="solapa cheq" id="solCheq"><span class="sol2"><small>Informe</small>Cheques</span></button>
+    <button class="solapa cheq" id="solCheq"><span class="sol2"><small>Informe</small>CHEQUES</span></button>
     <button class="solapa arca" id="solArca">Datos ARCA</button>
   </div>
 </header>
@@ -248,7 +250,7 @@
   <!-- Solapa Cheques -->
   <section id="pagCheq" hidden>
     <div class="titulo-sec no-imprimir">Informe de cheques denunciados</div>
-    <div class="modos no-imprimir"><button id="modoManual" class="activa">⌨️ Ingresar datos manualmente</button><button id="modoEscanear">📷 Ingresar a través de imagen</button></div>
+    <div class="modos no-imprimir"><button id="modoManual" class="activa"><span class="ico">⌨️</span><span>Ingresar datos manualmente</span></button><button id="modoEscanear"><span class="ico">📷</span><span>Ingresar a través de imagen</span></button></div>
     <div class="tarjeta no-imprimir" id="cheqEscanear" hidden>
       <img class="foto-cheque" id="escVista" alt="" hidden>
       <div class="ayuda" id="escEstado" style="margin-top:0">Al tomar la foto, asegurate que la <b>fila de números de la parte inferior del cheque</b> quede dentro del recuadro. La app completará los datos automáticamente.</div>
