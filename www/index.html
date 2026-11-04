@@ -182,6 +182,19 @@
   details.config[open] .abrir, details.config[open] .sin-copia { display: none; }
   details.ayuda-mas { margin-top: 8px; font-size: 13px; color: var(--gris); }
   details.ayuda-mas summary { color: var(--color); font-weight: 700; cursor: pointer; }
+  /* Cámara propia con recuadro guía para la fila de números del cheque */
+  .camara { position: fixed; inset: 0; z-index: 80; background: #000; display: none; overflow: hidden; touch-action: none; }
+  .camara.abierta { display: block; }
+  .camara video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .camara .guia { position: absolute; left: 4%; right: 4%; top: 50%; height: 0; padding-bottom: 20%; transform: translateY(-50%); border: 3px solid #fff; border-radius: 12px; box-shadow: 0 0 0 9999px rgba(0,0,0,.55); pointer-events: none; }
+
+  .camara .cam-texto { position: absolute; left: 16px; right: 16px; top: calc(28px + env(safe-area-inset-top)); color: #fff; text-align: center; font-size: 17px; font-weight: 700; line-height: 1.35; text-shadow: 0 1px 3px #000; }
+  .camara .cam-texto small { display: block; font-weight: 500; font-size: 14px; margin-top: 6px; opacity: .9; }
+  .camara .cam-abajo { position: absolute; left: 0; right: 0; bottom: calc(26px + env(safe-area-inset-bottom)); display: flex; align-items: center; justify-content: space-around; }
+  .camara .cam-boton { border: 0; background: rgba(255,255,255,.2); color: #fff; border-radius: 22px; padding: 10px 14px; font-size: 15px; font-weight: 700; min-width: 96px; }
+  .camara .disparar { width: 76px; height: 76px; border-radius: 50%; border: 5px solid #fff; background: rgba(255,255,255,.35); padding: 0; }
+  .camara .disparar:active { background: #fff; }
+  .camara .foco { position: absolute; width: 64px; height: 64px; margin: -32px 0 0 -32px; border: 2px solid #FFD54A; border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity .3s; }
   .cert-ok { color: var(--ok); font-weight: 700; font-size: 14px; }
   .hoja .copia-pie { padding: 8px 16px calc(12px + env(safe-area-inset-bottom)); font-size: 13px; color: var(--gris); border-top: 1px solid var(--borde); text-align: center; }
   .hoja .copia-pie button { border: 0; background: none; color: var(--color); font-weight: 700; font-size: 13px; padding: 4px 6px; text-decoration: underline; }
@@ -231,7 +244,7 @@
     <div class="modos no-imprimir"><button id="modoManual" class="activa">⌨️ Ingresar datos manualmente</button><button id="modoEscanear">📷 Ingresar a través de imagen</button></div>
     <div class="tarjeta no-imprimir" id="cheqEscanear" hidden>
       <img class="foto-cheque" id="escVista" alt="" hidden>
-      <div class="ayuda" id="escEstado" style="margin-top:0">Foto del cheque <b>entero y derecho</b>, con buena luz. La app completa los datos sola.</div>
+      <div class="ayuda" id="escEstado" style="margin-top:0">Al sacar la foto, poné la <b>fila de números de abajo</b> del cheque dentro del recuadro blanco. La app completa los datos sola.</div>
       <button class="btn principal" id="escFoto">📷 Sacar foto del cheque</button>
       <div class="acciones"><button class="btn sec chico" id="escImagen">📁 Elegir una foto guardada</button></div>
       <input type="file" accept="image/*" capture="environment" id="escArchivo" hidden>
@@ -293,6 +306,17 @@
 </div>
 <div class="aviso" id="aviso"></div>
 <input type="file" id="copiaArchivo" hidden>
+<div class="camara" id="camara">
+  <video id="camVideo" playsinline muted autoplay></video>
+  <div class="guia"></div>
+  <div class="foco" id="camFoco"></div>
+  <div class="cam-texto">Poné la <b>fila de números de abajo</b> del cheque dentro del recuadro<small>Que ocupe todo el ancho, derecha y nítida. Tocá la pantalla para enfocar.</small></div>
+  <div class="cam-abajo">
+    <button class="cam-boton" id="camCancelar">Cancelar</button>
+    <button class="disparar" id="camDisparar" aria-label="Sacar foto"></button>
+    <button class="cam-boton" id="camLuz" style="visibility:hidden">💡 Luz</button>
+  </div>
+</div>
 
 <script src="lib/html2canvas.min.js"></script>
 <script src="lib/jspdf.umd.min.js"></script>
@@ -709,10 +733,23 @@ async function leerRecuadro(img, giros) {
   return null;
 }
 
+// Recorta la franja del medio de la foto (donde estaba el recuadro de la cámara)
+function bandaCentral(img, giro, frac) {
+  const c = fotoEnCanvas(img, giro);
+  const alto = Math.max(40, Math.round(c.height * frac)), y = Math.round((c.height - alto) / 2);
+  const b = document.createElement('canvas'); b.width = c.width; b.height = alto;
+  b.getContext('2d', { willReadFrequently: true }).drawImage(c, 0, y, c.width, alto, 0, 0, c.width, alto);
+  return b;
+}
+
 async function leerFoto(ev) {
   const f = ev.target.files?.[0];
   ev.target.value = '';
-  if (!f) return;
+  if (f) leerImagen(f, null);
+}
+
+// banda: si la foto viene de la cámara con recuadro, la fracción del alto donde está la fila de números (al medio)
+async function leerImagen(f, banda) {
   const est = $('escEstado'), vista = $('escVista');
   if (vista.src) URL.revokeObjectURL(vista.src);
   vista.src = URL.createObjectURL(f); vista.hidden = false;
@@ -723,11 +760,18 @@ async function leerFoto(ev) {
   try {
     const img = await new Promise((ok, mal) => { const i = new Image(); i.onload = () => ok(i); i.onerror = mal; i.src = vista.src; });
     // Si la foto es vertical, el cheque seguramente está de costado: se prueba girado primero
-    const giros = img.naturalHeight > img.naturalWidth ? [90, 270, 0] : [0, 90, 270];
-    // 1) el recuadro impreso de arriba a la derecha (rápido, con el lector de texto de Android)
-    r = await leerRecuadro(img, giros);
-    // 2) si no, la fila de números de abajo (banda CMC-7)
+    const giros = !banda && img.naturalHeight > img.naturalWidth ? [90, 270, 0] : [0, 90, 270];
     let primera = null;
+    // 0) con la cámara de la app, primero la franja del recuadro (la foto puede venir girada: se prueba derecha, al revés y de costado)
+    if (banda) for (const giro of [0, 180, 90, 270]) {
+      await pausa();
+      const x = CMC7.leerCanvas(bandaCentral(img, giro, banda));
+      if (x && (!bancos || bancos.some(b => b.codigo === +x.banco))) { r = x; break; }
+      primera = primera || x;
+    }
+    // 1) el recuadro impreso de arriba a la derecha (rápido, con el lector de texto de Android)
+    if (!r) r = await leerRecuadro(img, giros);
+    // 2) si no, la fila de números de abajo (banda CMC-7) buscándola en toda la foto
     if (!r) for (const giro of giros) {
       await pausa();
       const x = CMC7.leerCanvas(fotoEnCanvas(img, giro));
@@ -740,7 +784,7 @@ async function leerFoto(ev) {
   $('escFoto').disabled = $('escImagen').disabled = false;
   if (r) { chequeLeido(r); return; }
   est.innerHTML = `<span class="rojo"><b>No pude leer los números del cheque.</b></span><br>Probá otra vez:
-    <ul style="margin:6px 0 0;padding-left:18px"><li>cheque apoyado en una mesa, derecho y entero en la foto</li><li>con buena luz, sin sombra ni reflejo</li><li>que se vea nítida la fila de números de abajo (tocá la pantalla para enfocar)</li></ul>`;
+    <ul style="margin:6px 0 0;padding-left:18px"><li>cheque apoyado en una mesa, con buena luz, sin sombra ni reflejo</li><li>la fila de números de abajo dentro del recuadro, ocupando todo el ancho</li><li>tocá la pantalla para enfocar antes de sacar</li></ul>`;
   $('escFoto').textContent = '📷 Sacar otra foto';
 }
 
@@ -749,7 +793,7 @@ function chequeLeido(r) {
   modoCheque(false);
   $('escVista').hidden = true;
   $('escFoto').textContent = '📷 Sacar foto del cheque';
-  $('escEstado').innerHTML = 'Foto del cheque <b>entero y derecho</b>, con buena luz. La app completa los datos sola.';
+  $('escEstado').innerHTML = 'Al sacar la foto, poné la <b>fila de números de abajo</b> del cheque dentro del recuadro blanco. La app completa los datos sola.';
   const b = bancos?.find(x => x.codigo === +r.banco);
   if (b) elegirBanco(b);
   else { bancoSel = null; $('banco').value = String(+r.banco); $('bancoEstado').innerHTML = `<div class="banco-mal">✖ No encontré el banco ${r.banco}. Revisá el código.</div>`; }
@@ -762,7 +806,70 @@ function chequeLeido(r) {
 
 $('modoManual').onclick = () => modoCheque(false);
 $('modoEscanear').onclick = () => modoCheque(true);
-$('escFoto').onclick = () => $('escArchivo').click();
+// ---------- Cámara propia (con recuadro). Si el teléfono no la deja usar, se abre la cámara normal ----------
+let camStream = null, camLuz = false;
+async function abrirCamara() {
+  if (!navigator.mediaDevices?.getUserMedia) { $('escArchivo').click(); return; }
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 3840 }, height: { ideal: 2160 } } });
+  } catch (e) {
+    if (/NotAllowed|Permission/i.test(e?.name + e?.message)) alert('La app necesita permiso para usar la cámara. Si no te lo pregunta, activalo en Ajustes del teléfono → Aplicaciones → Consulta CUIT BCRA → Permisos → Cámara.');
+    else $('escArchivo').click();
+    return;
+  }
+  const v = $('camVideo'); v.srcObject = camStream;
+  $('camara').classList.add('abierta');
+  try { await v.play(); } catch {}
+  const pista = camStream.getVideoTracks()[0];
+  try { await pista.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }); } catch {}
+  const cap = pista.getCapabilities?.() || {};
+  camLuz = false; $('camLuz').style.visibility = cap.torch ? 'visible' : 'hidden'; $('camLuz').textContent = '💡 Luz';
+}
+function cerrarCamara() {
+  camStream?.getTracks().forEach(t => t.stop()); camStream = null;
+  $('camVideo').srcObject = null;
+  $('camara').classList.remove('abierta');
+}
+$('camCancelar').onclick = cerrarCamara;
+$('camLuz').onclick = async () => {
+  const pista = camStream?.getVideoTracks()[0]; if (!pista) return;
+  camLuz = !camLuz;
+  try { await pista.applyConstraints({ advanced: [{ torch: camLuz }] }); $('camLuz').textContent = camLuz ? '💡 Apagar' : '💡 Luz'; } catch { camLuz = !camLuz; }
+};
+// Tocar la pantalla: enfoca en ese punto (si el teléfono lo permite)
+$('camVideo').onclick = async e => {
+  const f = $('camFoco'); f.style.left = e.clientX + 'px'; f.style.top = e.clientY + 'px'; f.style.opacity = 1; setTimeout(() => { f.style.opacity = 0; }, 900);
+  const pista = camStream?.getVideoTracks()[0]; if (!pista) return;
+  const x = e.clientX / innerWidth, y = e.clientY / innerHeight;
+  try { await pista.applyConstraints({ advanced: [{ pointsOfInterest: [{ x, y }], focusMode: 'single-shot' }] }); } catch {}
+  setTimeout(() => pista.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(() => {}), 2500);
+};
+$('camDisparar').onclick = async () => {
+  const v = $('camVideo'); if (!camStream || !v.videoWidth) return;
+  navigator.vibrate?.(40);
+  // Qué parte del video se ve en pantalla (el video llena la pantalla recortando los costados)
+  const W = innerWidth, H = innerHeight, k = Math.max(W / v.videoWidth, H / v.videoHeight);
+  const visibleH = H / k / v.videoHeight;                  // fracción del alto del video que se ve
+  const guia = document.querySelector('.camara .guia').getBoundingClientRect();
+  let banda = Math.min(0.7, (guia.height / H) * visibleH * 2.2);   // franja del recuadro con margen
+  let foto = null;
+  // Foto con la máxima calidad de la cámara; si no se puede, el cuadro del video
+  try {
+    if (window.ImageCapture) {
+      const b = await new ImageCapture(camStream.getVideoTracks()[0]).takePhoto();
+      if (b?.size) foto = b;
+      banda = Math.min(0.7, banda * 1.3);
+    }
+  } catch {}
+  if (!foto) {
+    const c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight;
+    c.getContext('2d').drawImage(v, 0, 0);
+    foto = await new Promise(ok => c.toBlob(ok, 'image/jpeg', 0.95));
+  }
+  cerrarCamara();
+  if (foto) leerImagen(foto, banda);
+};
+$('escFoto').onclick = abrirCamara;
 $('escImagen').onclick = () => $('escArchivo2').click();
 $('escArchivo').onchange = leerFoto;
 $('escArchivo2').onchange = leerFoto;
@@ -1484,7 +1591,8 @@ buscarActualizacion();
 
 // Botón "atrás" de Android: primero cierra la ventana de guardados
 window.Capacitor?.Plugins?.App?.addListener?.('backButton', ({ canGoBack }) => {
-  if ($('hoja').classList.contains('abierta')) $('hoja').classList.remove('abierta');
+  if ($('camara').classList.contains('abierta')) cerrarCamara();
+  else if ($('hoja').classList.contains('abierta')) $('hoja').classList.remove('abierta');
   else if (!$('pagCheq').hidden && !$('cheqEscanear').hidden) modoCheque(false);
   else if (canGoBack) history.back();
   else window.Capacitor.Plugins.App.exitApp();
