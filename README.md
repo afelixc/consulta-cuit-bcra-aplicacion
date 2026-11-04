@@ -1,4 +1,4 @@
-# Consulta CUIT BCRA · Aplicación Android
+# INVESTI-CUIT · Aplicación Android (antes "Consulta CUIT BCRA")
 
 App para el teléfono (APK) de [Consulta CUIT BCRA](https://github.com/afelixc/consulta-cuit-bcra):
 
@@ -8,7 +8,7 @@ App para el teléfono (APK) de [Consulta CUIT BCRA](https://github.com/afelixc/c
 
 ## 📱 Instalar
 
-1. Desde el teléfono, descargá **[Consulta-CUIT-BCRA.apk](../../releases/latest/download/Consulta-CUIT-BCRA.apk)**.
+1. Desde el teléfono, descargá **[INVESTI-CUIT.apk](../../releases/latest/download/INVESTI-CUIT.apk)**.
 2. Abrí el archivo descargado y tocá **Instalar**.
 3. La primera vez Android pide permiso para "instalar apps de origen desconocido": tocá **Configuración**, activá **Permitir de esta fuente** y volvé.
 4. Si aparece **Play Protect** ("app desconocida"), tocá **Más detalles** → **Instalar de todas formas**.

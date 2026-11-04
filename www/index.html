@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Consulta CUIT BCRA</title>
+<title>INVESTI-CUIT</title>
 <meta name="description" content="Informe por CUIT y cheques denunciados (BCRA)">
 <meta name="theme-color" content="#1F4E8C">
 <meta name="color-scheme" content="light">
@@ -224,7 +224,7 @@
 <header>
   <div class="barra">
     <img src="icono-192.png" alt="">
-    <h1>Consulta CUIT BCRA</h1>
+    <h1>INVESTI-CUIT</h1>
     <button class="btn-guardados" id="btnGuardados">★ Guardados</button>
   </div>
   <div class="solapas">
@@ -822,7 +822,7 @@ async function abrirCamara() {
   try {
     camStream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 3840 }, height: { ideal: 2160 } } });
   } catch (e) {
-    if (/NotAllowed|Permission/i.test(e?.name + e?.message)) alert('La app necesita permiso para usar la cámara. Si no te lo pregunta, activalo en Ajustes del teléfono → Aplicaciones → Consulta CUIT BCRA → Permisos → Cámara.');
+    if (/NotAllowed|Permission/i.test(e?.name + e?.message)) alert('La app necesita permiso para usar la cámara. Si no te lo pregunta, activalo en Ajustes del teléfono → Aplicaciones → INVESTI-CUIT → Permisos → Cámara.');
     else $('escArchivo').click();
     return;
   }
@@ -1368,7 +1368,7 @@ function mostrarArca(doc, cuit, ejemplo) {
     ${val(hijo(g, 'dependencia'), 'descripcionDependencia') ? `<div class="ct-linea" style="margin-top:8px">Dependencia: ${esc(val(hijo(g, 'dependencia'), 'descripcionDependencia'))}</div>` : ''}
     ${caract.length ? `<div class="ct-sec">Características</div><table>${caract.map(c => fila(esc(val(c, 'descripcionCaracterizacion')), '')).join('')}</table>` : ''}
     ${errores.length ? `<div class="ct-sec">Observaciones de ARCA</div><table>${errores.map(e => fila(esc(e), '')).join('')}</table>` : ''}
-    <div class="ct-pie">Datos obtenidos del servicio oficial de ARCA (constancia de inscripción) el ${ahora()}, con la app Consulta CUIT.<br>
+    <div class="ct-pie">Datos obtenidos del servicio oficial de ARCA (constancia de inscripción) el ${ahora()}, con la app INVESTI-CUIT.<br>
       Es un resumen informativo: no reemplaza a la constancia oficial que se descarga de arca.gob.ar.</div>
   </div>`;
   ultArca = [`CONSTANCIA DE INSCRIPCIÓN${ejemplo ? ' (EJEMPLO)' : ''}`, (nombre || '').toUpperCase(), `CUIT: ${fmtCuit(cuit)}`,

@@ -1,4 +1,4 @@
-# Consulta CUIT BCRA · App Android
+# INVESTI-CUIT (antes Consulta CUIT BCRA) · App Android
 
 ## Regla: hay dos versiones de la misma app
 
