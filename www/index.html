@@ -178,7 +178,7 @@
   details.config > summary { list-style: none; cursor: pointer; }
   details.config > summary::-webkit-details-marker { display: none; }
   details.config .abrir { display: inline-block; margin-top: 8px; color: var(--color); font-weight: 700; font-size: 14px; }
-  details.config[open] .abrir { display: none; }
+  details.config[open] .abrir, details.config[open] .sin-copia { display: none; }
   details.ayuda-mas { margin-top: 8px; font-size: 13px; color: var(--gris); }
   details.ayuda-mas summary { color: var(--color); font-weight: 700; cursor: pointer; }
   .cert-ok { color: var(--ok); font-weight: 700; font-size: 14px; }
@@ -865,7 +865,7 @@ function pintarConfigArca() {
     const sinCopia = !almacen.leer('ultimaCopia', '');
     caja.innerHTML = `<details class="config"${dias < 30 ? ' open' : ''}><summary><div class="cert-ok">✔ Certificado de ARCA cargado (CUIT ${esc(fmtCuit(arcaCfg.cuit))})</div>
       <div class="sub ${dias < 30 ? 'rojo' : ''}">Vence el ${ic.vence.toLocaleDateString('es-AR')}${dias < 30 ? ` · ¡faltan ${Math.max(dias, 0)} días! Hay que renovarlo` : ''}</div>
-      ${sinCopia ? '<div class="sub naranja" style="font-weight:600">Todavía no hiciste la copia de seguridad</div>' : ''}
+      ${sinCopia ? '<div class="sub naranja sin-copia" style="font-weight:600">Todavía no hiciste la copia de seguridad</div>' : ''}
       <span class="abrir">⚙ Opciones y copia de seguridad ▾</span></summary>
       <div class="acciones"><button class="btn sec chico" id="arcaEjemplo">Ver un ejemplo</button><button class="btn sec chico" id="arcaRehacer">Cambiar certificado</button></div></details>`;
     $('arcaRehacer').onclick = () => borrarCertArca('¿Borrar el certificado cargado y armar uno nuevo?\n\nVas a tener que hacer de nuevo los pasos en la página de ARCA.');
@@ -1138,7 +1138,7 @@ function mostrarArca(doc, cuit, ejemplo) {
 
   let h = `<div class="tarjeta resultado arca">
     ${ejemplo ? '<div class="ejemplo">EJEMPLO · datos inventados para ver cómo sale</div>' : ''}
-    <div class="sub">CUIT ${fmtCuit(cuit)}<button class="copiar-cuit no-imprimir" data-copiar="${fmtCuit(cuit)}" aria-label="Copiar CUIT"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copiar</button> · Constancia ARCA</div>
+    <div class="sub">Constancia ARCA · CUIT ${fmtCuit(cuit)}<button class="copiar-cuit no-imprimir" data-copiar="${fmtCuit(cuit)}" aria-label="Copiar CUIT"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copiar</button></div>
     <h2>${nombre ? esc(nombre) : '<span class="naranja">Sin nombre registrado</span>'}</h2>
     <div class="estado ${activo ? 'bien' : 'mal'}">${activo ? '✔' : '✖'} CUIT ${esc(val(g, 'estadoClave') || 'sin estado')}${iva ? `<small>Condición frente al IVA: ${esc(iva)}${catMono ? ' · Categoría ' + esc(val(catMono, 'descripcionCategoria')) : ''}</small>` : ''}</div>
     <div class="seccion arca">Datos generales</div>
