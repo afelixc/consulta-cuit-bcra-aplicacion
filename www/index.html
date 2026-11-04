@@ -46,6 +46,10 @@
   .solapa.cheq { background: var(--verde-medio); color: var(--verde); }
   .solapa.arca { background: var(--violeta-medio); color: var(--violeta); }
   .solapa { flex: 1 1 0; min-width: 0; height: 44px; padding: 0 4px; font-size: 13px; line-height: 1.15; display: flex; align-items: center; justify-content: center; text-align: center; }
+  .sol2 { display: flex; flex-direction: column; align-items: center; line-height: 1.1; }
+  .sol2 small { font-size: 11px; font-weight: 600; }
+  .solapa.activa .sol2 small { font-size: 12px; }
+  .titulo-sec { background: var(--blanco); color: var(--color); border-radius: 12px; padding: 11px 14px; font-weight: 800; font-size: 17px; text-align: center; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
   .solapa.activa { background: var(--claro); height: 60px; font-size: 16px; font-weight: 800; flex: 1.35 1 0; box-shadow: 0 -3px 8px rgba(0,0,0,.18); }
   .solapas { align-items: flex-end; }
   .solapa { transition: all .15s; }
@@ -220,7 +224,7 @@
   </div>
   <div class="solapas">
     <button class="solapa cuit activa" id="solCuit">Informe BCRA</button>
-    <button class="solapa cheq" id="solCheq">Cheques denunciados</button>
+    <button class="solapa cheq" id="solCheq"><span class="sol2"><small>Informe</small>Cheques</span></button>
     <button class="solapa arca" id="solArca">Datos ARCA</button>
   </div>
 </header>
@@ -241,10 +245,11 @@
 
   <!-- Solapa Cheques -->
   <section id="pagCheq" hidden>
+    <div class="titulo-sec no-imprimir">Informe de cheques denunciados</div>
     <div class="modos no-imprimir"><button id="modoManual" class="activa">⌨️ Ingresar datos manualmente</button><button id="modoEscanear">📷 Ingresar a través de imagen</button></div>
     <div class="tarjeta no-imprimir" id="cheqEscanear" hidden>
       <img class="foto-cheque" id="escVista" alt="" hidden>
-      <div class="ayuda" id="escEstado" style="margin-top:0">Al sacar la foto, poné la <b>fila de números de abajo</b> del cheque dentro del recuadro blanco. La app completa los datos sola.</div>
+      <div class="ayuda" id="escEstado" style="margin-top:0">Al tomar la foto, asegurate que la <b>fila de números de la parte inferior del cheque</b> quede dentro del recuadro. La app completará los datos automáticamente.</div>
       <button class="btn principal" id="escFoto">📷 Sacar foto del cheque</button>
       <div class="acciones"><button class="btn sec chico" id="escImagen">📁 Elegir una foto guardada</button></div>
       <input type="file" accept="image/*" capture="environment" id="escArchivo" hidden>
@@ -793,7 +798,7 @@ function chequeLeido(r) {
   modoCheque(false);
   $('escVista').hidden = true;
   $('escFoto').textContent = '📷 Sacar foto del cheque';
-  $('escEstado').innerHTML = 'Al sacar la foto, poné la <b>fila de números de abajo</b> del cheque dentro del recuadro blanco. La app completa los datos sola.';
+  $('escEstado').innerHTML = 'Al tomar la foto, asegurate que la <b>fila de números de la parte inferior del cheque</b> quede dentro del recuadro. La app completará los datos automáticamente.';
   const b = bancos?.find(x => x.codigo === +r.banco);
   if (b) elegirBanco(b);
   else { bancoSel = null; $('banco').value = String(+r.banco); $('bancoEstado').innerHTML = `<div class="banco-mal">✖ No encontré el banco ${r.banco}. Revisá el código.</div>`; }
