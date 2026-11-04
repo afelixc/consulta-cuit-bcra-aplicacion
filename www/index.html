@@ -130,6 +130,9 @@
   .g .nota { font-size: 13px; color: #6B21A8; }
   .g.alerta .t1 { color: var(--rojo); }
   .g .quitar { border: 0; background: #F3F4F6; border-radius: 8px; padding: 8px 10px; font-size: 13px; color: var(--gris); }
+  .g.elegido { outline: 2px solid var(--rojo); background: #FDF1F1; }
+  .g .borrar { border: 0; background: var(--rojo); color: #fff; border-radius: 8px; padding: 8px 12px; font-size: 14px; font-weight: 700; }
+  .g { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
   .vacio { color: var(--gris); text-align: center; padding: 30px 10px; }
   .actualizar { display: block; width: 100%; border: 0; text-align: left; background: #FFF4D6; color: #7A4B00; border: 1.5px solid #F0C36A; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; font-size: 15px; font-weight: 700; cursor: pointer; }
   .actualizar[hidden] { display: none; }
@@ -238,7 +241,6 @@
       <input type="text" id="cuit" inputmode="numeric" autocomplete="off" placeholder="Ej: 20-12345678-9">
       <div class="ayuda">Con o sin guiones.</div>
       <button class="btn principal" id="btnCuit">Consultar</button>
-      <div class="acciones"><button class="btn sec chico cuitonline" data-campo="cuit">🔎 No sé el CUIT: buscar por nombre en CUIT Online</button></div>
     </div>
     <div id="resCuit"></div>
   </section>
@@ -1506,6 +1508,7 @@ function pintarHoja() {
     const vis = recientes.map((r, i) => ({ r, i })).filter(({ r }) => r.tipo === tipo && (!f || coincide(`${r.t1} ${r.t2}`, f)));
     html = vis.map(({ r, i }) => `<div class="g ${r.alerta ? 'alerta' : ''}" data-r="${i}"><div class="txt"><div class="t1">${esc(r.t1)}</div><div class="t2">${esc(r.t2)}</div><div class="t2">${esc(r.fecha)}</div></div></div>`).join('')
       || `<div class="vacio">Sin consultas todavía.</div>`;
+    if (vis.length) html = '<div class="ayuda" style="margin:0 0 8px;text-align:center">Para borrar una, dejala apretada.</div>' + html;
   }
   const cuerpo = $('hojaLista');
   cuerpo.innerHTML = html;
@@ -1516,7 +1519,23 @@ function pintarHoja() {
     lista.splice(+b.dataset.q, 1); grabar(); pintarHoja();
   });
   cuerpo.querySelectorAll('[data-i]').forEach(d => d.onclick = () => abrirGuardado(lista[+d.dataset.i], tipo));
+  // Últimas consultas: dejar apretada una para que aparezca "Borrar"
+  cuerpo.querySelectorAll('[data-r]').forEach(d => {
+    let t = null;
+    const elegir = () => {
+      t = null; navigator.vibrate?.(30);
+      cuerpo.querySelectorAll('.g.elegido').forEach(x => { x.classList.remove('elegido'); x.querySelector('.borrar')?.remove(); });
+      d.classList.add('elegido'); d.dataset.largo = '1';
+      d.insertAdjacentHTML('beforeend', '<button class="borrar">🗑 Borrar</button>');
+      d.querySelector('.borrar').onclick = ev => { ev.stopPropagation(); recientes.splice(+d.dataset.r, 1); grabar(); pintarHoja(); aviso('Consulta borrada'); };
+    };
+    d.addEventListener('pointerdown', () => { t = setTimeout(elegir, 550); });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(n => d.addEventListener(n, () => { clearTimeout(t); t = null; }));
+    d.addEventListener('contextmenu', e => e.preventDefault());
+  });
   cuerpo.querySelectorAll('[data-r]').forEach(d => d.onclick = () => {
+    if (d.dataset.largo) { delete d.dataset.largo; return; }       // el toque largo no abre la consulta
+    if (cuerpo.querySelector('.g.elegido')) { pintarHoja(); return; }   // tocar otra cosa cancela el borrar
     const r = recientes[+d.dataset.r];
     abrirGuardado(r.tipo === 'cheque' ? { codigo: r.datos.codigo, banco: r.datos.banco, nro: r.datos.nro, suc: r.datos.suc, cta: r.datos.cta } : { cuit: r.datos.cuit }, r.tipo);
   });
