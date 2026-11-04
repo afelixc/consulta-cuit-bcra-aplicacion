@@ -163,6 +163,8 @@
   .modos button { flex: 1; border: 0; border-radius: 10px; padding: 10px 6px; font-weight: 700; font-size: 14px; line-height: 1.25; background: var(--medio); color: var(--color); }
   .modos button { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12.5px; text-align: left; min-height: 56px; }
   .modos button .ico { font-size: 26px; line-height: 1; flex-shrink: 0; }
+  #escFoto { font-size: 15px; gap: 10px; padding: 9px 14px; min-height: 52px; }
+  #escFoto .ico-foto { font-size: 32px; line-height: 1; }
   .modos button.activa { background: var(--color); color: #fff; }
   .foto-cheque { width: 100%; max-height: 220px; object-fit: contain; border-radius: 10px; background: #f2f2f2; margin-bottom: 10px; display: block; }
   .campo-fila { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
@@ -254,7 +256,7 @@
     <div class="tarjeta no-imprimir" id="cheqEscanear" hidden>
       <img class="foto-cheque" id="escVista" alt="" hidden>
       <div class="ayuda" id="escEstado" style="margin-top:0">Al tomar la foto, asegurate que la <b>fila de números de la parte inferior del cheque</b> quede dentro del recuadro. La app completará los datos automáticamente.</div>
-      <button class="btn principal" id="escFoto">📷 Sacar foto del cheque</button>
+      <button class="btn principal" id="escFoto"><span class="ico-foto">📷</span><span>Sacar foto del cheque</span></button>
       <div class="acciones"><button class="btn sec chico" id="escImagen">📁 Elegir una foto guardada</button></div>
       <input type="file" accept="image/*" capture="environment" id="escArchivo" hidden>
       <input type="file" accept="image/*" id="escArchivo2" hidden>
@@ -794,14 +796,14 @@ async function leerImagen(f, banda) {
   if (r) { chequeLeido(r); return; }
   est.innerHTML = `<span class="rojo"><b>No pude leer los números del cheque.</b></span><br>Probá otra vez:
     <ul style="margin:6px 0 0;padding-left:18px"><li>cheque apoyado en una mesa, con buena luz, sin sombra ni reflejo</li><li>la fila de números de abajo dentro del recuadro, ocupando todo el ancho</li><li>tocá la pantalla para enfocar antes de sacar</li></ul>`;
-  $('escFoto').textContent = '📷 Sacar otra foto';
+  $('escFoto').lastChild.textContent = 'Sacar otra foto';
 }
 
 function chequeLeido(r) {
   navigator.vibrate?.(80);
   modoCheque(false);
   $('escVista').hidden = true;
-  $('escFoto').textContent = '📷 Sacar foto del cheque';
+  $('escFoto').lastChild.textContent = 'Sacar foto del cheque';
   $('escEstado').innerHTML = 'Al tomar la foto, asegurate que la <b>fila de números de la parte inferior del cheque</b> quede dentro del recuadro. La app completará los datos automáticamente.';
   const b = bancos?.find(x => x.codigo === +r.banco);
   if (b) elegirBanco(b);
