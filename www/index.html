@@ -205,6 +205,7 @@
   .camara .cam-boton { border: 0; background: rgba(255,255,255,.2); color: #fff; border-radius: 22px; padding: 10px 14px; font-size: 15px; font-weight: 700; min-width: 96px; }
   .camara .disparar { width: 76px; height: 76px; border-radius: 50%; border: 5px solid #fff; background: rgba(255,255,255,.35); padding: 0; }
   .camara .disparar:active { background: #fff; }
+  .camara .guia.recuadro { left: 12%; right: 12%; padding-bottom: 46%; }
   .camara .foco { position: absolute; width: 64px; height: 64px; margin: -32px 0 0 -32px; border: 2px solid #FFD54A; border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity .3s; }
   .cert-ok { color: var(--ok); font-weight: 700; font-size: 14px; }
   .hoja .copia-pie { padding: 8px 16px calc(12px + env(safe-area-inset-bottom)); font-size: 13px; color: var(--gris); border-top: 1px solid var(--borde); text-align: center; }
@@ -257,6 +258,7 @@
       <img class="foto-cheque" id="escVista" alt="" hidden>
       <div class="ayuda" id="escEstado" style="margin-top:0">Al tomar la foto, asegurate que la <b>fila de números de la parte inferior del cheque</b> quede dentro del recuadro. La app completará los datos automáticamente.</div>
       <button class="btn principal" id="escFoto"><span class="ico-foto">📷</span><span>Sacar foto del cheque</span></button>
+      <div class="acciones"><button class="btn sec chico" id="escRecuadro">🔲 Leer el recuadro de números (arriba a la derecha)</button></div>
       <div class="acciones"><button class="btn sec chico" id="escImagen">📁 Elegir una foto guardada</button></div>
       <input type="file" accept="image/*" capture="environment" id="escArchivo" hidden>
       <input type="file" accept="image/*" id="escArchivo2" hidden>
@@ -319,9 +321,9 @@
 <input type="file" id="copiaArchivo" hidden>
 <div class="camara" id="camara">
   <video id="camVideo" playsinline muted autoplay></video>
-  <div class="guia"></div>
+  <div class="guia" id="camGuia"></div>
   <div class="foco" id="camFoco"></div>
-  <div class="cam-texto">Poné la <b>fila de números de abajo</b> del cheque dentro del recuadro<small>Que ocupe todo el ancho, derecha y nítida. Tocá la pantalla para enfocar.</small></div>
+  <div class="cam-texto" id="camTexto">Poné la <b>fila de números de abajo</b> del cheque dentro del recuadro<small>Que ocupe todo el ancho, derecha y nítida. Tocá la pantalla para enfocar.</small></div>
   <div class="cam-abajo">
     <button class="cam-boton" id="camCancelar">Cancelar</button>
     <button class="disparar" id="camDisparar" aria-label="Sacar foto"></button>
@@ -731,6 +733,24 @@ function datosDelRecuadro(texto) {
   return { banco: ruta[1], sucursal: ruta[2], cp: ruta[3], cheque, cuenta, todo: ruta[1] + ruta[2] + ruta[3] + cheque + cuenta, origen: 'recuadro' };
 }
 
+// Pasa un pedazo de la foto por el lector de texto y busca los datos del recuadro
+async function recuadroEnCanvas(c) {
+  try {
+    const { texto } = await lectorTexto.leer({ imagen: c.toDataURL('image/jpeg', 0.92).split(',')[1] });
+    const r = datosDelRecuadro(texto);
+    if (r && (!bancos || bancos.some(b => b.codigo === +r.banco))) return r;
+  } catch {}
+  return null;
+}
+// Recorta el centro de la foto (fw x fh = fracción del ancho y del alto), achicado a máx. 2000 px
+function centroDeFoto(img, giro, fw, fh) {
+  const c = fotoEnCanvas(img, giro);
+  const w = Math.round(c.width * Math.min(1, fw)), h = Math.round(c.height * Math.min(1, fh));
+  const k = Math.min(1, 2000 / Math.max(w, h));
+  const b = document.createElement('canvas'); b.width = Math.round(w * k); b.height = Math.round(h * k);
+  b.getContext('2d').drawImage(c, (c.width - w) / 2, (c.height - h) / 2, w, h, 0, 0, b.width, b.height);
+  return b;
+}
 async function leerRecuadro(img, giros) {
   if (!lectorTexto) return null;
   for (const giro of giros) {
@@ -758,14 +778,16 @@ async function leerFoto(ev) {
   ev.target.value = '';
   if (f) leerImagen(f, null);
 }
+let ultimoModo = 'fila';
 
 // banda: si la foto viene de la cámara con recuadro, la fracción del alto donde está la fila de números (al medio)
-async function leerImagen(f, banda) {
+// recorte: con la cámara en modo recuadro, { fw, fh } = parte del centro de la foto donde está el recuadro de números
+async function leerImagen(f, banda, recorte) {
   const est = $('escEstado'), vista = $('escVista');
   if (vista.src) URL.revokeObjectURL(vista.src);
   vista.src = URL.createObjectURL(f); vista.hidden = false;
   est.innerHTML = '<b>Leyendo los números del cheque…</b> (unos segundos)';
-  $('escFoto').disabled = $('escImagen').disabled = true;
+  $('escFoto').disabled = $('escImagen').disabled = $('escRecuadro').disabled = true;
   await cargarBancos();
   let r = null;
   try {
@@ -773,6 +795,12 @@ async function leerImagen(f, banda) {
     // Si la foto es vertical, el cheque seguramente está de costado: se prueba girado primero
     const giros = !banda && img.naturalHeight > img.naturalWidth ? [90, 270, 0] : [0, 90, 270];
     let primera = null;
+    // 0') modo recuadro: el lector de texto sobre el centro de la foto (si vino girada, se prueba de costado)
+    if (recorte && lectorTexto) for (const giro of [0, 90, 270]) {
+      await pausa();
+      r = await recuadroEnCanvas(giro % 180 ? centroDeFoto(img, giro, recorte.fh, recorte.fw) : centroDeFoto(img, giro, recorte.fw, recorte.fh));
+      if (r) break;
+    }
     // 0) con la cámara de la app, primero la franja del recuadro (la foto puede venir girada: se prueba derecha, al revés y de costado)
     if (banda) for (const giro of [0, 180, 90, 270]) {
       await pausa();
@@ -792,10 +820,14 @@ async function leerImagen(f, banda) {
     }
     r = r || primera;
   } catch {}
-  $('escFoto').disabled = $('escImagen').disabled = false;
+  $('escFoto').disabled = $('escImagen').disabled = $('escRecuadro').disabled = false;
   if (r) { chequeLeido(r); return; }
-  est.innerHTML = `<span class="rojo"><b>No pude leer los números del cheque.</b></span><br>Probá otra vez:
-    <ul style="margin:6px 0 0;padding-left:18px"><li>cheque apoyado en una mesa, con buena luz, sin sombra ni reflejo</li><li>la fila de números de abajo dentro del recuadro, ocupando todo el ancho</li><li>tocá la pantalla para enfocar antes de sacar</li></ul>`;
+  const otro = ultimoModo === 'recuadro'
+    ? '<button class="btn sec chico" id="escOtro" style="width:100%;margin-top:8px">📷 Probar con la fila de números de abajo</button>'
+    : '<button class="btn sec chico" id="escOtro" style="width:100%;margin-top:8px">🔲 Probar con el recuadro de números (arriba a la derecha)</button>';
+  setTimeout(() => { const b = $('escOtro'); if (b) b.onclick = () => abrirCamara(ultimoModo === 'recuadro' ? 'fila' : 'recuadro'); });
+  est.innerHTML = `<span class="rojo"><b>No pude leer los números del cheque.</b></span>${otro}<br>Probá otra vez:
+    <ul style="margin:6px 0 0;padding-left:18px"><li>cheque apoyado en una mesa, con buena luz, sin sombra ni reflejo</li><li>${ultimoModo === 'recuadro' ? 'el recuadro de números entero dentro del marco blanco' : 'la fila de números de abajo dentro del recuadro, ocupando todo el ancho'}</li><li>tocá la pantalla para enfocar antes de sacar</li></ul>`;
   $('escFoto').lastChild.textContent = 'Sacar otra foto';
 }
 
@@ -818,8 +850,13 @@ function chequeLeido(r) {
 $('modoManual').onclick = () => modoCheque(false);
 $('modoEscanear').onclick = () => modoCheque(true);
 // ---------- Cámara propia (con recuadro). Si el teléfono no la deja usar, se abre la cámara normal ----------
-let camStream = null, camLuz = false;
-async function abrirCamara() {
+let camStream = null, camLuz = false, camModo = 'fila';
+async function abrirCamara(modo) {
+  camModo = ultimoModo = modo === 'recuadro' ? 'recuadro' : 'fila';
+  $('camGuia').classList.toggle('recuadro', camModo === 'recuadro');
+  $('camTexto').innerHTML = camModo === 'recuadro'
+    ? 'Poné el <b>recuadro con los números</b> (arriba a la derecha del cheque) dentro del marco blanco<small>Que se vean nítidos los tres renglones. Tocá la pantalla para enfocar.</small>'
+    : 'Poné la <b>fila de números de abajo</b> del cheque dentro del recuadro<small>Que ocupe todo el ancho, derecha y nítida. Tocá la pantalla para enfocar.</small>';
   if (!navigator.mediaDevices?.getUserMedia) { $('escArchivo').click(); return; }
   try {
     camStream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 3840 }, height: { ideal: 2160 } } });
@@ -861,7 +898,9 @@ $('camDisparar').onclick = async () => {
   // Qué parte del video se ve en pantalla (el video llena la pantalla recortando los costados)
   const W = innerWidth, H = innerHeight, k = Math.max(W / v.videoWidth, H / v.videoHeight);
   const visibleH = H / k / v.videoHeight;                  // fracción del alto del video que se ve
-  const guia = document.querySelector('.camara .guia').getBoundingClientRect();
+  const guia = $('camGuia').getBoundingClientRect();
+  const visibleW = W / k / v.videoWidth;
+  const recorte = camModo === 'recuadro' ? { fw: Math.min(1, guia.width / W * visibleW * 1.35), fh: Math.min(1, guia.height / H * visibleH * 1.6) } : null;
   let banda = Math.min(0.7, (guia.height / H) * visibleH * 2.2);   // franja del recuadro con margen
   let foto = null;
   // Foto con la máxima calidad de la cámara; si no se puede, el cuadro del video
@@ -878,9 +917,11 @@ $('camDisparar').onclick = async () => {
     foto = await new Promise(ok => c.toBlob(ok, 'image/jpeg', 0.95));
   }
   cerrarCamara();
-  if (foto) leerImagen(foto, banda);
+  if (foto) leerImagen(foto, recorte ? null : banda, recorte);
 };
-$('escFoto').onclick = abrirCamara;
+$('escFoto').onclick = () => abrirCamara('fila');
+$('escRecuadro').onclick = () => abrirCamara('recuadro');
+if (!lectorTexto) $('escRecuadro').parentElement.hidden = true;   // el lector de texto solo está en Android
 $('escImagen').onclick = () => $('escArchivo2').click();
 $('escArchivo').onchange = leerFoto;
 $('escArchivo2').onchange = leerFoto;
