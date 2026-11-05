@@ -258,9 +258,7 @@
       <img class="foto-cheque" id="escVista" alt="" hidden>
       <div class="ayuda" id="escEstado" style="margin-top:0">Al tomar la foto, asegurate que la <b>fila de números de la parte inferior del cheque</b> quede dentro del recuadro. La app completará los datos automáticamente.</div>
       <button class="btn principal" id="escFoto"><span class="ico-foto">📷</span><span>Sacar foto del cheque</span></button>
-      <div class="ayuda" id="estadoLector" hidden></div>
-      <div class="acciones"><button class="btn sec chico" id="escRecuadro">🔲 Leer el recuadro de números (arriba a la derecha)</button></div>
-      <div class="acciones"><button class="btn sec chico" id="escImagen">📁 Elegir una foto guardada</button></div>
+            <div class="acciones"><button class="btn sec chico" id="escImagen">📁 Elegir una foto guardada</button></div>
       <input type="file" accept="image/*" capture="environment" id="escArchivo" hidden>
       <input type="file" accept="image/*" id="escArchivo2" hidden>
     </div>
@@ -794,7 +792,7 @@ async function leerImagen(f, banda, recorte) {
   if (vista.src) URL.revokeObjectURL(vista.src);
   vista.src = URL.createObjectURL(f); vista.hidden = false;
   est.innerHTML = '<b>Leyendo los números del cheque…</b> (unos segundos)';
-  $('escFoto').disabled = $('escImagen').disabled = $('escRecuadro').disabled = true;
+  $('escFoto').disabled = $('escImagen').disabled = true;
   await cargarBancos();
   let r = null;
   ultimaLectura = '';
@@ -828,15 +826,10 @@ async function leerImagen(f, banda, recorte) {
     }
     r = r || primera;
   } catch {}
-  $('escFoto').disabled = $('escImagen').disabled = $('escRecuadro').disabled = false;
+  $('escFoto').disabled = $('escImagen').disabled = false;
   if (r) { chequeLeido(r); return; }
-  const otro = ultimoModo === 'recuadro'
-    ? '<button class="btn sec chico" id="escOtro" style="width:100%;margin-top:8px">📷 Probar con la fila de números de abajo</button>'
-    : '<button class="btn sec chico" id="escOtro" style="width:100%;margin-top:8px">🔲 Probar con el recuadro de números (arriba a la derecha)</button>';
-  setTimeout(() => { const b = $('escOtro'); if (b) b.onclick = () => abrirCamara(ultimoModo === 'recuadro' ? 'fila' : 'recuadro'); });
-  est.innerHTML = `<span class="rojo"><b>No pude leer los números del cheque.</b></span>${otro}<br>Probá otra vez:
-    <ul style="margin:6px 0 0;padding-left:18px"><li>cheque apoyado en una mesa, con buena luz, sin sombra ni reflejo</li><li>${ultimoModo === 'recuadro' ? 'el recuadro de números entero dentro del marco blanco' : 'la fila de números de abajo dentro del recuadro, ocupando todo el ancho'}</li><li>tocá la pantalla para enfocar antes de sacar</li></ul>
-    ${true ? `<details class="ayuda-mas"><summary>Ver qué leyó la app (para avisar si falla)</summary><pre style="white-space:pre-wrap;font-size:12px;margin:6px 0 0">${esc((ultimaLectura || (lectorTexto ? '(el lector de texto no devolvió nada)' : '(este teléfono no tiene el lector de texto)')).slice(0, 800))}</pre></details>` : ''}`;
+  est.innerHTML = `<span class="rojo"><b>No pude leer los números del cheque.</b></span><br>Probá otra vez:
+    <ul style="margin:6px 0 0;padding-left:18px"><li>cheque apoyado en una mesa, con buena luz, sin sombra ni reflejo</li><li>${ultimoModo === 'recuadro' ? 'el recuadro de números entero dentro del marco blanco' : 'la fila de números de abajo dentro del recuadro, ocupando todo el ancho'}</li><li>tocá la pantalla para enfocar antes de sacar</li></ul>`;
   $('escFoto').lastChild.textContent = 'Sacar otra foto';
 }
 
@@ -857,8 +850,7 @@ function chequeLeido(r) {
 }
 
 $('modoManual').onclick = () => modoCheque(false);
-$('modoEscanear').onclick = () => { modoCheque(true); revisarLector(); };
-$('solCheq').addEventListener('click', () => { if (!$('cheqEscanear').hidden) revisarLector(); });
+$('modoEscanear').onclick = () => modoCheque(true);
 // ---------- Cámara propia (con recuadro). Si el teléfono no la deja usar, se abre la cámara normal ----------
 let camStream = null, camLuz = false, camModo = 'fila';
 async function abrirCamara(modo) {
@@ -930,30 +922,6 @@ $('camDisparar').onclick = async () => {
   if (foto) leerImagen(foto, recorte ? null : banda, recorte);
 };
 $('escFoto').onclick = () => abrirCamara('fila');
-$('escRecuadro').onclick = () => abrirCamara('recuadro');
-if (!lectorTexto) $('escRecuadro').parentElement.hidden = true;   // el lector de texto solo está en Android
-// Muestra si el teléfono ya tiene el lector de texto de Google y, si no, un botón para bajarlo
-async function revisarLector() {
-  const caja = $('estadoLector');
-  if (!lectorTexto) return;
-  caja.hidden = false;
-  caja.innerHTML = 'Revisando si el teléfono tiene el lector de texto…';
-  let listo = false;
-  try { listo = (await Promise.race([lectorTexto.estado(), new Promise((_, mal) => setTimeout(() => mal(new Error('los Servicios de Google no respondieron')), 10000))])).listo; } catch (e) { caja.hidden = false; caja.innerHTML = `<span class="naranja">No se pudo saber si está el lector de texto: ${esc(e?.message || e)}</span>`; return; }
-  caja.hidden = false;
-  if (listo) { caja.innerHTML = '<span class="verde"><b>✔ Lector de texto listo</b></span>'; return; }
-  caja.innerHTML = `<span class="naranja"><b>Falta descargar el lector de texto de Google</b> (una sola vez, con internet). Sin él no se puede leer el recuadro.</span>
-    <button class="btn sec chico" id="bajarLector" style="width:100%;margin-top:6px">⬇ Descargar lector de texto</button>`;
-  $('bajarLector').onclick = async () => {
-    caja.innerHTML = '<b>Descargando el lector de texto…</b> puede tardar unos minutos. Dejá la app abierta.';
-    try { await lectorTexto.descargar(); caja.innerHTML = '<span class="verde"><b>✔ Lector de texto listo.</b> Ya podés sacar la foto.</span>'; }
-    catch (e) {
-      caja.innerHTML = `<span class="rojo"><b>No se pudo descargar:</b> ${esc(e?.message || e)}</span><br>Actualizá los <b>Servicios de Google Play</b> (Play Store → buscá "Servicios de Google Play" → Actualizar) y probá de nuevo.
-        <button class="btn sec chico" id="bajarLector2" style="width:100%;margin-top:6px">⬇ Probar de nuevo</button>`;
-      $('bajarLector2').onclick = revisarLector;
-    }
-  };
-}
 $('escImagen').onclick = () => $('escArchivo2').click();
 $('escArchivo').onchange = leerFoto;
 $('escArchivo2').onchange = leerFoto;
