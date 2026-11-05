@@ -197,7 +197,7 @@
   .camara { position: fixed; inset: 0; z-index: 80; background: #000; display: none; overflow: hidden; touch-action: none; }
   .camara.abierta { display: block; }
   .camara video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-  .camara .guia { position: absolute; left: 4%; right: 4%; top: 50%; height: 0; padding-bottom: 20%; transform: translateY(-50%); border: 3px solid #fff; border-radius: 12px; box-shadow: 0 0 0 9999px rgba(0,0,0,.55); pointer-events: none; }
+  .camara .guia { position: absolute; left: 2%; right: 2%; top: 50%; height: 0; padding-bottom: 11%; transform: translateY(-50%); border: 3px solid #fff; border-radius: 12px; box-shadow: 0 0 0 9999px rgba(0,0,0,.55); pointer-events: none; }
 
   .camara .cam-texto { position: absolute; left: 16px; right: 16px; top: calc(28px + env(safe-area-inset-top)); color: #fff; text-align: center; font-size: 17px; font-weight: 700; line-height: 1.35; text-shadow: 0 1px 3px #000; }
   .camara .cam-texto small { display: block; font-weight: 500; font-size: 14px; margin-top: 6px; opacity: .9; }
@@ -205,6 +205,9 @@
   .camara .cam-boton { border: 0; background: rgba(255,255,255,.2); color: #fff; border-radius: 22px; padding: 10px 14px; font-size: 15px; font-weight: 700; min-width: 96px; }
   .camara .disparar { width: 76px; height: 76px; border-radius: 50%; border: 5px solid #fff; background: rgba(255,255,255,.35); padding: 0; }
   .camara .disparar:active { background: #fff; }
+  .camara .brillo { position: absolute; left: 20px; right: 20px; bottom: calc(122px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 10px; color: #fff; font-size: 13px; font-weight: 700; text-shadow: 0 1px 3px #000; }
+  .camara .brillo[hidden] { display: none; }
+  .camara .brillo input { flex: 1; accent-color: #fff; height: 28px; }
   .camara .guia.recuadro { left: 12%; right: 12%; padding-bottom: 46%; }
   .camara .foco { position: absolute; width: 64px; height: 64px; margin: -32px 0 0 -32px; border: 2px solid #FFD54A; border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity .3s; }
   .cert-ok { color: var(--ok); font-weight: 700; font-size: 14px; }
@@ -322,7 +325,8 @@
   <video id="camVideo" playsinline muted autoplay></video>
   <div class="guia" id="camGuia"></div>
   <div class="foco" id="camFoco"></div>
-  <div class="cam-texto" id="camTexto">Poné la <b>fila de números de abajo</b> del cheque dentro del recuadro<small>Que ocupe todo el ancho, derecha y nítida. Tocá la pantalla para enfocar.</small></div>
+  <div class="cam-texto" id="camTexto">Poné la <b>fila de números de abajo</b> del cheque dentro del recuadro<small>Acercá el teléfono hasta que ocupe todo el ancho. Si brilla, bajá el brillo. Tocá para enfocar.</small></div>
+  <div class="brillo" id="camBrillo" hidden><span>🌑 Más oscuro</span><input type="range" id="camBrilloValor"><span>Más claro ☀️</span></div>
   <div class="cam-abajo">
     <button class="cam-boton" id="camCancelar">Cancelar</button>
     <button class="disparar" id="camDisparar" aria-label="Sacar foto"></button>
@@ -858,7 +862,7 @@ async function abrirCamara(modo) {
   $('camGuia').classList.toggle('recuadro', camModo === 'recuadro');
   $('camTexto').innerHTML = camModo === 'recuadro'
     ? 'Poné el <b>recuadro con los números</b> (arriba a la derecha del cheque) dentro del marco blanco<small>Que se vean nítidos los tres renglones. Tocá la pantalla para enfocar.</small>'
-    : 'Poné la <b>fila de números de abajo</b> del cheque dentro del recuadro<small>Que ocupe todo el ancho, derecha y nítida. Tocá la pantalla para enfocar.</small>';
+    : 'Poné la <b>fila de números de abajo</b> del cheque dentro del recuadro<small>Acercá el teléfono hasta que ocupe todo el ancho. Si brilla, bajá el brillo. Tocá para enfocar.</small>';
   if (!navigator.mediaDevices?.getUserMedia) { $('escArchivo').click(); return; }
   try {
     camStream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 3840 }, height: { ideal: 2160 } } });
@@ -874,7 +878,24 @@ async function abrirCamara(modo) {
   try { await pista.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }); } catch {}
   const cap = pista.getCapabilities?.() || {};
   camLuz = false; $('camLuz').style.visibility = cap.torch ? 'visible' : 'hidden'; $('camLuz').textContent = '💡 Luz';
+  // Control de brillo (exposición): oscurecer ayuda cuando el cheque brilla o refleja. Arranca un poco más oscuro.
+  const ex = cap.exposureCompensation;
+  $('camBrillo').hidden = !(ex && ex.max > ex.min);
+  if (ex && ex.max > ex.min) {
+    const b = $('camBrilloValor');
+    b.min = ex.min; b.max = ex.max; b.step = ex.step || 0.1;
+    let guardado = NaN; try { guardado = parseFloat(localStorage.getItem('brilloCamara')); } catch {}
+    b.value = Math.min(ex.max, Math.max(ex.min, isNaN(guardado) ? -0.7 : guardado));
+    aplicarBrillo();
+  }
 }
+async function aplicarBrillo() {
+  const pista = camStream?.getVideoTracks()[0]; if (!pista) return;
+  const v = +$('camBrilloValor').value;
+  try { await pista.applyConstraints({ advanced: [{ exposureMode: 'continuous', exposureCompensation: v }] }); } catch {}
+  try { localStorage.setItem('brilloCamara', String(v)); } catch {}
+}
+$('camBrilloValor').oninput = aplicarBrillo;
 function cerrarCamara() {
   camStream?.getTracks().forEach(t => t.stop()); camStream = null;
   $('camVideo').srcObject = null;
