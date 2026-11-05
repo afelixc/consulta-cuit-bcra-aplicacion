@@ -301,7 +301,7 @@
     <div class="tarjeta no-imprimir" id="arcaConfig"></div>
   </section>
   <p class="pie no-imprimir" style="text-align:center">Datos: API oficial del Banco Central de la República Argentina<br>
-    Creada por AFC · Uso libre y sin fines de lucro</p>
+    Creada por AFC · Uso libre y sin fines de lucro<span id="verApp"></span></p>
 </main>
 
 <!-- Ventana de guardados -->
@@ -835,7 +835,7 @@ async function leerImagen(f, banda, recorte) {
   setTimeout(() => { const b = $('escOtro'); if (b) b.onclick = () => abrirCamara(ultimoModo === 'recuadro' ? 'fila' : 'recuadro'); });
   est.innerHTML = `<span class="rojo"><b>No pude leer los números del cheque.</b></span>${otro}<br>Probá otra vez:
     <ul style="margin:6px 0 0;padding-left:18px"><li>cheque apoyado en una mesa, con buena luz, sin sombra ni reflejo</li><li>${ultimoModo === 'recuadro' ? 'el recuadro de números entero dentro del marco blanco' : 'la fila de números de abajo dentro del recuadro, ocupando todo el ancho'}</li><li>tocá la pantalla para enfocar antes de sacar</li></ul>
-    ${lectorTexto ? `<details class="ayuda-mas"><summary>Ver qué leyó la app (para avisar si falla)</summary><pre style="white-space:pre-wrap;font-size:12px;margin:6px 0 0">${esc((ultimaLectura || '(el lector de texto no se usó)').slice(0, 800))}</pre></details>` : ''}`;
+    ${true ? `<details class="ayuda-mas"><summary>Ver qué leyó la app (para avisar si falla)</summary><pre style="white-space:pre-wrap;font-size:12px;margin:6px 0 0">${esc((ultimaLectura || (lectorTexto ? '(el lector de texto no devolvió nada)' : '(este teléfono no tiene el lector de texto)')).slice(0, 800))}</pre></details>` : ''}`;
   $('escFoto').lastChild.textContent = 'Sacar otra foto';
 }
 
@@ -1628,6 +1628,7 @@ async function buscarActualizacion() {
     const app = window.Capacitor?.Plugins?.App;
     if (!app) return;
     const { build } = await app.getInfo();
+    $('verApp').textContent = ' · Versión 1.0.' + build;
     const r = await fetch(`https://api.github.com/repos/${REPO_APP}/releases/latest`, { cache: 'no-store' });
     if (!r.ok) return;
     const ultima = await r.json();
