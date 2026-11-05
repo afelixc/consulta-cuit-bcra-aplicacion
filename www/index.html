@@ -903,14 +903,14 @@ async function abrirCamara(modo) {
   if (camEx || camTiempo) {
     const b = $('camBrilloValor');
     const min = camTiempo ? (camEx ? camEx.min : 0) - EXTRA_OSCURO : camEx.min, max = camEx ? camEx.max : 0;
-    b.min = min; b.max = max; b.step = 0.1;
-    let guardado = NaN; try { guardado = parseFloat(localStorage.getItem('brilloCamara2')); } catch {}
+    b.min = min; b.max = max; b.step = 0.05;
+    let guardado = NaN; try { guardado = parseFloat(localStorage.getItem('brilloCamara3')); } catch {}
     b.value = Math.min(max, Math.max(min, isNaN(guardado) ? (camEx ? camEx.min : min / 2) : guardado));
     aplicarBrillo();
   }
 }
-const EXTRA_OSCURO = 5;   // pasos extra de oscuridad (cada paso = la mitad de luz)
-let camEx = null, camTiempo = null, camIso = null, camTiempoBase = 0;
+const EXTRA_OSCURO = 4;   // pasos extra de oscuridad (cada paso = la mitad de luz)
+let camEx = null, camTiempo = null, camIso = null, camTiempoBase = 0, camIsoBase = 0;
 async function aplicarBrillo() {
   const pista = camStream?.getVideoTracks()[0]; if (!pista) return;
   const v = +$('camBrilloValor').value;
@@ -920,18 +920,24 @@ async function aplicarBrillo() {
       // tiempo de exposición de referencia: el que estaba usando la cámara en automático
       if (!camTiempoBase) {
         if (camEx) { try { await pista.applyConstraints({ advanced: [{ exposureMode: 'continuous', exposureCompensation: camEx.min }] }); } catch {} await new Promise(ok => setTimeout(ok, 400)); }
-        camTiempoBase = pista.getSettings?.().exposureTime || Math.min(camTiempo.max, Math.max(camTiempo.min, 100));
+        const ajuste = pista.getSettings?.() || {};
+        camTiempoBase = Math.min(camTiempo.max, Math.max(camTiempo.min, ajuste.exposureTime || 333));
+        camIsoBase = camIso ? Math.min(camIso.max, Math.max(camIso.min, ajuste.iso || camIso.min)) : 0;
       }
-      const t = Math.max(camTiempo.min, camTiempoBase * Math.pow(2, v - limite));
+      // Se arranca justo donde estaba la cámara en automático (mismo tiempo y misma sensibilidad), para que no haya salto,
+      // y se va acortando el tiempo de a poco; si ya no se puede acortar más, se baja la sensibilidad.
+      const factor = Math.pow(2, v - limite);
+      let t = camTiempoBase * factor, iso = camIsoBase;
+      if (t < camTiempo.min) { if (camIso) iso = Math.max(camIso.min, camIsoBase * t / camTiempo.min); t = camTiempo.min; }
       const c = { exposureMode: 'manual', exposureTime: t };
-      if (camIso) c.iso = camIso.min;
+      if (camIso) c.iso = iso;
       await pista.applyConstraints({ advanced: [c] });
     } else {
       camTiempoBase = 0;
       await pista.applyConstraints({ advanced: [camEx ? { exposureMode: 'continuous', exposureCompensation: v } : { exposureMode: 'continuous' }] });
     }
   } catch {}
-  try { localStorage.setItem('brilloCamara2', String(v)); } catch {}
+  try { localStorage.setItem('brilloCamara3', String(v)); } catch {}
 }
 $('camBrilloValor').oninput = aplicarBrillo;
 function cerrarCamara() {
