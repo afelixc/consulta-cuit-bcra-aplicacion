@@ -896,7 +896,8 @@ async function abrirCamara(modo) {
   // Tramo derecho: compensación automática (−2 a +2 aprox.). Tramo izquierdo extra: exposición manual cada vez más corta
   // (y sensibilidad mínima), para oscurecer mucho más de lo que deja la compensación.
   camEx = cap.exposureCompensation && cap.exposureCompensation.max > cap.exposureCompensation.min ? cap.exposureCompensation : null;
-  camTiempo = cap.exposureTime && cap.exposureTime.max > cap.exposureTime.min && (cap.exposureMode || []).includes('manual') ? cap.exposureTime : null;
+  // La exposición manual no anda pareja en todos los teléfonos (saltaba a negro): se usa solo el ajuste automático de la cámara
+  camTiempo = null;
   camIso = cap.iso && cap.iso.max > cap.iso.min ? cap.iso : null;
   camTiempoBase = 0;
   $('camBrillo').hidden = !(camEx || camTiempo);
@@ -904,8 +905,8 @@ async function abrirCamara(modo) {
     const b = $('camBrilloValor');
     const min = camTiempo ? (camEx ? camEx.min : 0) - EXTRA_OSCURO : camEx.min, max = camEx ? camEx.max : 0;
     b.min = min; b.max = max; b.step = 0.05;
-    let guardado = NaN; try { guardado = parseFloat(localStorage.getItem('brilloCamara3')); } catch {}
-    b.value = Math.min(max, Math.max(min, isNaN(guardado) ? (camEx ? camEx.min : min / 2) : guardado));
+    let guardado = NaN; try { guardado = parseFloat(localStorage.getItem('brilloCamara4')); } catch {}
+    b.value = Math.min(max, Math.max(min, isNaN(guardado) ? min / 2 : guardado));
     aplicarBrillo();
   }
 }
@@ -937,7 +938,7 @@ async function aplicarBrillo() {
       await pista.applyConstraints({ advanced: [camEx ? { exposureMode: 'continuous', exposureCompensation: v } : { exposureMode: 'continuous' }] });
     }
   } catch {}
-  try { localStorage.setItem('brilloCamara3', String(v)); } catch {}
+  try { localStorage.setItem('brilloCamara4', String(v)); } catch {}
 }
 $('camBrilloValor').oninput = aplicarBrillo;
 function cerrarCamara() {
