@@ -325,7 +325,7 @@
   <video id="camVideo" playsinline muted autoplay></video>
   <div class="guia" id="camGuia"></div>
   <div class="foco" id="camFoco"></div>
-  <div class="cam-texto" id="camTexto">Poné la <b>fila de números de abajo</b> del cheque dentro del recuadro<small>Acercá el teléfono hasta que ocupe todo el ancho. Si brilla, bajá el brillo. Tocá para enfocar.</small></div>
+  <div class="cam-texto" id="camTexto">Poné la <b>fila de números de abajo</b> del cheque dentro del recuadro<small>Acercá el teléfono hasta que ocupe todo el ancho y quedate quieto: <b>se lee solo</b>. Si brilla, bajá el brillo.</small></div>
   <div class="brillo" id="camBrillo" hidden><span>🌑 Más oscuro</span><input type="range" id="camBrilloValor"><span>Más claro ☀️</span></div>
   <div class="cam-abajo">
     <button class="cam-boton" id="camCancelar">Cancelar</button>
@@ -791,18 +791,20 @@ let ultimoModo = 'fila';
 
 // banda: si la foto viene de la cámara con recuadro, la fracción del alto donde está la fila de números (al medio)
 // recorte: con la cámara en modo recuadro, { fw, fh } = parte del centro de la foto donde está el recuadro de números
-// extra: { blob, banda } otra imagen de la misma toma (el cuadro del video), por si la foto grande salió con otro brillo
-async function leerImagen(f, banda, recorte, extra) {
+// franja: con la cámara de la app, el pedazo del recuadro (canvas) que se lee primero; si no, se busca en toda la imagen
+async function leerImagen(f, banda, recorte, franja) {
   const est = $('escEstado'), vista = $('escVista');
-  if (vista.src) URL.revokeObjectURL(vista.src);
-  vista.src = URL.createObjectURL(f); vista.hidden = false;
+  if (vista.src?.startsWith('blob:')) URL.revokeObjectURL(vista.src);
+  const urlFoto = URL.createObjectURL(f);
+  // de la cámara de la app se muestra solo la franja de los números (chiquita), no la foto entera
+  vista.src = franja ? franja.toDataURL('image/jpeg', 0.85) : urlFoto; vista.hidden = false;
   est.innerHTML = '<b>Leyendo los números del cheque…</b> (unos segundos)';
   $('escFoto').disabled = $('escImagen').disabled = true;
   await cargarBancos();
   let r = null;
   ultimaLectura = '';
   try {
-    const img = await new Promise((ok, mal) => { const i = new Image(); i.onload = () => ok(i); i.onerror = mal; i.src = vista.src; });
+    const img = await new Promise((ok, mal) => { const i = new Image(); i.onload = () => ok(i); i.onerror = mal; i.src = urlFoto; });
     // Si la foto es vertical, el cheque seguramente está de costado: se prueba girado primero
     const giros = !banda && img.naturalHeight > img.naturalWidth ? [90, 270, 0] : [0, 90, 270];
     let primera = null;
@@ -812,19 +814,16 @@ async function leerImagen(f, banda, recorte, extra) {
       r = await recuadroEnCanvas(giro % 180 ? centroDeFoto(img, giro, recorte.fh, recorte.fw) : centroDeFoto(img, giro, recorte.fw, recorte.fh));
       if (r) break;
     }
-    // 0) con la cámara de la app, primero la franja del recuadro: en el cuadro del video (lo que se vio en pantalla) y en la foto grande
-    if (banda && extra && !r) {
-      const url = URL.createObjectURL(extra.blob);
-      try {
-        const img2 = await new Promise((ok, mal) => { const i = new Image(); i.onload = () => ok(i); i.onerror = mal; i.src = url; });
-        for (const giro of [0, 180]) {
-          await pausa();
-          const x = CMC7.leerCanvas(bandaCentral(img2, giro, extra.banda));
-          if (x && (!bancos || bancos.some(b => b.codigo === +x.banco))) { r = x; break; }
-          primera = primera || x;
-        }
-      } catch {}
-      URL.revokeObjectURL(url);
+    // 0) con la cámara de la app, primero la franja del recuadro (tal cual y con la luz emparejada; derecha y al revés)
+    if (franja && !r) {
+      const al = document.createElement('canvas'); al.width = franja.width; al.height = franja.height;
+      const cx = al.getContext('2d', { willReadFrequently: true }); cx.translate(al.width, al.height); cx.rotate(Math.PI); cx.drawImage(franja, 0, 0);
+      for (const [c, em] of [[franja, false], [franja, true], [al, false], [al, true]]) {
+        await pausa();
+        const x = CMC7.leerCanvas(c, { emparejar: em });
+        if (x && (!bancos || bancos.some(b => b.codigo === +x.banco))) { r = x; break; }
+        primera = primera || x;
+      }
     }
     if (banda && !r) for (const giro of [0, 180, 90, 270]) {
       await pausa();
@@ -837,7 +836,7 @@ async function leerImagen(f, banda, recorte, extra) {
     // 2) si no, la fila de números de abajo (banda CMC-7) buscándola en toda la foto
     if (!r) for (const giro of giros) {
       await pausa();
-      const x = CMC7.leerCanvas(fotoEnCanvas(img, giro));
+      let x = CMC7.leerCanvas(fotoEnCanvas(img, giro));
       if (!x) continue;
       primera = primera || x;
       if (!bancos || bancos.some(b => b.codigo === +x.banco)) { r = x; break; }   // el banco tiene que existir
@@ -876,7 +875,7 @@ async function abrirCamara(modo) {
   $('camGuia').classList.toggle('recuadro', camModo === 'recuadro');
   $('camTexto').innerHTML = camModo === 'recuadro'
     ? 'Poné el <b>recuadro con los números</b> (arriba a la derecha del cheque) dentro del marco blanco<small>Que se vean nítidos los tres renglones. Tocá la pantalla para enfocar.</small>'
-    : 'Poné la <b>fila de números de abajo</b> del cheque dentro del recuadro<small>Acercá el teléfono hasta que ocupe todo el ancho. Si brilla, bajá el brillo. Tocá para enfocar.</small>';
+    : 'Poné la <b>fila de números de abajo</b> del cheque dentro del recuadro<small>Acercá el teléfono hasta que ocupe todo el ancho y quedate quieto: <b>se lee solo</b>. Si brilla, bajá el brillo.</small>';
   if (!navigator.mediaDevices?.getUserMedia) { $('escArchivo').click(); return; }
   try {
     camStream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 3840 }, height: { ideal: 2160 } } });
@@ -908,6 +907,59 @@ async function abrirCamara(modo) {
     let guardado = NaN; try { guardado = parseFloat(localStorage.getItem('brilloCamara4')); } catch {}
     b.value = Math.min(max, Math.max(min, isNaN(guardado) ? min / 2 : guardado));
     aplicarBrillo();
+  }
+  if (camModo === 'fila') escaneoEnVivo();
+}
+
+// ---------- Lectura en vivo: mientras la cámara está abierta, mira la franja del recuadro varias veces por segundo ----------
+// Cuando dos lecturas seguidas dan los mismos números (y el banco existe), completa los datos solo, sin apretar nada.
+let camVivo = 0;
+function franjaDelVideo(margen) {
+  const v = $('camVideo'), W = innerWidth, H = innerHeight;
+  const k = Math.max(W / v.videoWidth, H / v.videoHeight), ox = (W - v.videoWidth * k) / 2, oy = (H - v.videoHeight * k) / 2;
+  const g = $('camGuia').getBoundingClientRect();
+  const alto = g.height * margen, yc = g.top + g.height / 2;
+  let x0 = (g.left - 6 - ox) / k, x1 = (g.right + 6 - ox) / k, y0 = (yc - alto / 2 - oy) / k, y1 = (yc + alto / 2 - oy) / k;
+  // coordenadas enteras: si no, el navegador mezcla píxeles vecinos y las rayitas se borronean
+  x0 = Math.max(0, Math.floor(x0)); y0 = Math.max(0, Math.floor(y0)); x1 = Math.min(v.videoWidth, Math.ceil(x1)); y1 = Math.min(v.videoHeight, Math.ceil(y1));
+  const c = document.createElement('canvas'); c.width = Math.round(x1 - x0); c.height = Math.round(y1 - y0);
+  c.getContext('2d', { willReadFrequently: true }).drawImage(v, x0, y0, x1 - x0, y1 - y0, 0, 0, c.width, c.height);
+  return c;
+}
+// La lectura en vivo se hace en segundo plano (Worker) para que la cámara y los botones no se pongan lentos
+let lectorFondo = null, lectorPedidos = 0;
+function leerEnSegundoPlano(canvas, emparejar) {
+  if (!lectorFondo) { try { lectorFondo = new Worker('lib/cmc7-worker.js'); } catch { lectorFondo = false; } }
+  if (!lectorFondo) return Promise.resolve(CMC7.leerCanvas(canvas, { emparejar }));
+  const id = ++lectorPedidos, { width: w, height: h } = canvas;
+  const px = canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
+  return new Promise(ok => {
+    const escuchar = e => { if (e.data.id === id) { lectorFondo.removeEventListener('message', escuchar); ok(e.data.r); } };
+    lectorFondo.addEventListener('message', escuchar);
+    lectorFondo.postMessage({ id, px, w, h, emparejar }, [px.buffer]);
+  });
+}
+async function escaneoEnVivo() {
+  const yo = ++camVivo;
+  await cargarBancos();
+  let anterior = '', vuelta = 0;
+  while (yo === camVivo && camStream) {
+    await new Promise(ok => setTimeout(ok, 120));
+    const v = $('camVideo');
+    if (yo !== camVivo || !camStream || !v.videoWidth) continue;
+    let x = null;
+    try { x = await leerEnSegundoPlano(franjaDelVideo(2.2), vuelta++ % 2 === 1); } catch {}
+    if (yo !== camVivo) return;
+    if (!x || (bancos && !bancos.some(b => b.codigo === +x.banco))) continue;
+    if (x.todo === anterior) {
+      if (yo !== camVivo) return;
+      navigator.vibrate?.(80);
+      cerrarCamara();
+      chequeLeido(x);
+      return;
+    }
+    anterior = x.todo;
+    $('camTexto').innerHTML = 'Leyendo… <b>mantené quieto el teléfono</b>';
   }
 }
 const EXTRA_OSCURO = 4;   // pasos extra de oscuridad (cada paso = la mitad de luz)
@@ -942,6 +994,7 @@ async function aplicarBrillo() {
 }
 $('camBrilloValor').oninput = aplicarBrillo;
 function cerrarCamara() {
+  camVivo++;
   camStream?.getTracks().forEach(t => t.stop()); camStream = null;
   $('camVideo').srcObject = null;
   $('camara').classList.remove('abierta');
@@ -963,30 +1016,13 @@ $('camVideo').onclick = async e => {
 $('camDisparar').onclick = async () => {
   const v = $('camVideo'); if (!camStream || !v.videoWidth) return;
   navigator.vibrate?.(40);
-  // Qué parte del video se ve en pantalla (el video llena la pantalla recortando los costados)
-  const W = innerWidth, H = innerHeight, k = Math.max(W / v.videoWidth, H / v.videoHeight);
-  const visibleH = H / k / v.videoHeight;                  // fracción del alto del video que se ve
-  const guia = $('camGuia').getBoundingClientRect();
-  const visibleW = W / k / v.videoWidth;
-  const recorte = camModo === 'recuadro' ? { fw: Math.min(1, guia.width / W * visibleW * 1.35), fh: Math.min(1, guia.height / H * visibleH * 1.6) } : null;
-  let banda = Math.min(0.7, (guia.height / H) * visibleH * 2.2);   // franja del recuadro con margen
-  const bandaCuadro = banda;
-  // El cuadro del video tal como se ve en pantalla (con el brillo elegido): algunas cámaras sacan la foto grande con su propio brillo
+  // Se usa lo que se ve en pantalla (rápido y con el brillo elegido): la franja del recuadro y el cuadro entero por las dudas
+  const franja = franjaDelVideo(2.2);
   const cv = document.createElement('canvas'); cv.width = v.videoWidth; cv.height = v.videoHeight;
   cv.getContext('2d').drawImage(v, 0, 0);
   const cuadro = await new Promise(ok => cv.toBlob(ok, 'image/jpeg', 0.95));
-  let foto = null;
-  // Foto con la máxima calidad de la cámara; si no se puede, el cuadro del video
-  try {
-    if (window.ImageCapture) {
-      const b = await new ImageCapture(camStream.getVideoTracks()[0]).takePhoto();
-      if (b?.size) foto = b;
-      banda = Math.min(0.7, banda * 1.3);
-    }
-  } catch {}
   cerrarCamara();
-  if (!foto) leerImagen(cuadro, recorte ? null : bandaCuadro, recorte);
-  else leerImagen(foto, recorte ? null : banda, recorte, recorte || !cuadro ? null : { blob: cuadro, banda: bandaCuadro });
+  leerImagen(cuadro, null, null, franja);
 };
 $('escFoto').onclick = () => abrirCamara('fila');
 $('escImagen').onclick = () => $('escArchivo2').click();

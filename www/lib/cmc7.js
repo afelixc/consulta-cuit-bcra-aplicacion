@@ -208,14 +208,45 @@
     return a && b && c ? separar(a + b + c) : null;
   }
 
-  // Pasa una imagen (canvas) a escala de grises; si la franja es alta, la recorta en varias franjas horizontales
-  function leerCanvas(canvas) {
+  // Empareja la luz: divide cada punto por el "blanco del papel" de su zona (el más claro de alrededor, en su renglón)
+  // y estira el contraste. Sirve para la banda impresa clarita, con reflejo o con sombra de un lado.
+  function emparejar(g, w, h) {
+    // 1) suavizado chico (3×3) para que el grano del papel no cuente como "blanco"
+    const sv = new Uint8Array(w * h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      let s = 0, n = 0;
+      for (let dy = -1; dy <= 1; dy++) { const yy = y + dy; if (yy < 0 || yy >= h) continue; for (let dx = -1; dx <= 1; dx++) { const xx = x + dx; if (xx < 0 || xx >= w) continue; s += g[yy * w + xx]; n++; } }
+      sv[y * w + x] = s / n;
+    }
+    // 2) blanco del papel: el máximo del suavizado en una ventana a lo ancho y un poco a lo alto
+    const ven = Math.max(15, Math.round(w / 18)), medio = ven >> 1, fondoFila = new Uint8Array(w * h), cola = new Int32Array(w);
+    for (let y = 0; y < h; y++) {
+      const fila = y * w; let ini = 0, fin = 0;
+      for (let x = 0; x < w + medio; x++) {
+        if (x < w) { const v = sv[fila + x]; while (fin > ini && sv[fila + cola[fin - 1]] <= v) fin--; cola[fin++] = x; }
+        const c = x - medio; if (c < 0) continue;
+        while (cola[ini] < c - medio) ini++;
+        fondoFila[fila + c] = sv[fila + cola[ini]];
+      }
+    }
+    const alto = 3, r = new Uint8Array(w * h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      let b = 0; for (let yy = Math.max(0, y - alto); yy <= Math.min(h - 1, y + alto); yy++) { const v = fondoFila[yy * w + x]; if (v > b) b = v; }
+      // proporción contra el papel, con más contraste cerca del blanco (la tinta clarita se oscurece, el papel queda blanco)
+      r[y * w + x] = Math.round(255 * Math.pow(Math.min(1, g[y * w + x] / (b || 1)), 4));
+    }
+    return r;
+  }
+
+  // Pasa una imagen (canvas) a escala de grises y la lee. opciones.emparejar: corrige luz despareja y tinta clarita.
+  function leerCanvas(canvas, opciones) {
     const { width: w, height: h } = canvas;
     const px = canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
-    const g = new Uint8Array(w * h);
+    let g = new Uint8Array(w * h);
     for (let i = 0, j = 0; j < g.length; i += 4, j++) g[j] = (px[i] * 77 + px[i + 1] * 150 + px[i + 2] * 29) >> 8;
+    if (opciones?.emparejar) g = emparejar(g, w, h);
     return leerGris(g, w, h);
   }
 
-  window.CMC7 = { leerCanvas, leerGris, _interno: { otsu, perfilFranja, nitidez, leerPerfil, separar } };
+  window.CMC7 = { leerCanvas, leerGris, emparejar, _interno: { otsu, perfilFranja, nitidez, leerPerfil, separar } };
 })();
