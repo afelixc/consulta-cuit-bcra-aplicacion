@@ -268,18 +268,18 @@
       <div id="bancoEstado"></div>
       <ul class="sugerencias" id="bancoLista" hidden></ul>
 
-      <label class="campo" for="nroCheque">Nº de cheque</label>
-      <input type="text" id="nroCheque" inputmode="numeric" autocomplete="off" placeholder="Ej: 12345678">
       <div class="fila">
+        <div>
+          <label class="campo" for="nroCheque">Nº de cheque</label>
+          <input type="text" id="nroCheque" inputmode="numeric" autocomplete="off" placeholder="Ej: 12345678">
+        </div>
         <div>
           <label class="campo" for="sucursal">Sucursal</label>
           <input type="text" id="sucursal" inputmode="numeric" autocomplete="off" placeholder="Opcional">
         </div>
-        <div>
-          <label class="campo" for="cuenta">Nº de cuenta</label>
-          <input type="text" id="cuenta" inputmode="numeric" autocomplete="off" placeholder="Recomendado">
-        </div>
       </div>
+      <label class="campo" for="cuenta">Nº de cuenta</label>
+      <input type="text" id="cuenta" inputmode="numeric" autocomplete="off" placeholder="Recomendado">
       <details class="ayuda-mas"><summary>¿Dónde están estos números en el cheque?</summary>En la fila de números de abajo del cheque van, en orden: banco (3) · sucursal (3) · código postal (4) · Nº de cheque (8) · Nº de cuenta (11).</details>
       <button class="btn principal" id="btnCheq">Consultar</button>
     </div>
