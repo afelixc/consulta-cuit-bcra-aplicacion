@@ -791,7 +791,8 @@ let ultimoModo = 'fila';
 
 // banda: si la foto viene de la cámara con recuadro, la fracción del alto donde está la fila de números (al medio)
 // recorte: con la cámara en modo recuadro, { fw, fh } = parte del centro de la foto donde está el recuadro de números
-async function leerImagen(f, banda, recorte) {
+// extra: { blob, banda } otra imagen de la misma toma (el cuadro del video), por si la foto grande salió con otro brillo
+async function leerImagen(f, banda, recorte, extra) {
   const est = $('escEstado'), vista = $('escVista');
   if (vista.src) URL.revokeObjectURL(vista.src);
   vista.src = URL.createObjectURL(f); vista.hidden = false;
@@ -811,8 +812,21 @@ async function leerImagen(f, banda, recorte) {
       r = await recuadroEnCanvas(giro % 180 ? centroDeFoto(img, giro, recorte.fh, recorte.fw) : centroDeFoto(img, giro, recorte.fw, recorte.fh));
       if (r) break;
     }
-    // 0) con la cámara de la app, primero la franja del recuadro (la foto puede venir girada: se prueba derecha, al revés y de costado)
-    if (banda) for (const giro of [0, 180, 90, 270]) {
+    // 0) con la cámara de la app, primero la franja del recuadro: en el cuadro del video (lo que se vio en pantalla) y en la foto grande
+    if (banda && extra && !r) {
+      const url = URL.createObjectURL(extra.blob);
+      try {
+        const img2 = await new Promise((ok, mal) => { const i = new Image(); i.onload = () => ok(i); i.onerror = mal; i.src = url; });
+        for (const giro of [0, 180]) {
+          await pausa();
+          const x = CMC7.leerCanvas(bandaCentral(img2, giro, extra.banda));
+          if (x && (!bancos || bancos.some(b => b.codigo === +x.banco))) { r = x; break; }
+          primera = primera || x;
+        }
+      } catch {}
+      URL.revokeObjectURL(url);
+    }
+    if (banda && !r) for (const giro of [0, 180, 90, 270]) {
       await pausa();
       const x = CMC7.leerCanvas(bandaCentral(img, giro, banda));
       if (x && (!bancos || bancos.some(b => b.codigo === +x.banco))) { r = x; break; }
@@ -878,22 +892,46 @@ async function abrirCamara(modo) {
   try { await pista.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }); } catch {}
   const cap = pista.getCapabilities?.() || {};
   camLuz = false; $('camLuz').style.visibility = cap.torch ? 'visible' : 'hidden'; $('camLuz').textContent = '💡 Luz';
-  // Control de brillo (exposición): oscurecer ayuda cuando el cheque brilla o refleja. Arranca un poco más oscuro.
-  const ex = cap.exposureCompensation;
-  $('camBrillo').hidden = !(ex && ex.max > ex.min);
-  if (ex && ex.max > ex.min) {
+  // Control de brillo (exposición): oscurecer ayuda cuando el cheque brilla o refleja.
+  // Tramo derecho: compensación automática (−2 a +2 aprox.). Tramo izquierdo extra: exposición manual cada vez más corta
+  // (y sensibilidad mínima), para oscurecer mucho más de lo que deja la compensación.
+  camEx = cap.exposureCompensation && cap.exposureCompensation.max > cap.exposureCompensation.min ? cap.exposureCompensation : null;
+  camTiempo = cap.exposureTime && cap.exposureTime.max > cap.exposureTime.min && (cap.exposureMode || []).includes('manual') ? cap.exposureTime : null;
+  camIso = cap.iso && cap.iso.max > cap.iso.min ? cap.iso : null;
+  camTiempoBase = 0;
+  $('camBrillo').hidden = !(camEx || camTiempo);
+  if (camEx || camTiempo) {
     const b = $('camBrilloValor');
-    b.min = ex.min; b.max = ex.max; b.step = ex.step || 0.1;
-    let guardado = NaN; try { guardado = parseFloat(localStorage.getItem('brilloCamara')); } catch {}
-    b.value = Math.min(ex.max, Math.max(ex.min, isNaN(guardado) ? -0.7 : guardado));
+    const min = camTiempo ? (camEx ? camEx.min : 0) - EXTRA_OSCURO : camEx.min, max = camEx ? camEx.max : 0;
+    b.min = min; b.max = max; b.step = 0.1;
+    let guardado = NaN; try { guardado = parseFloat(localStorage.getItem('brilloCamara2')); } catch {}
+    b.value = Math.min(max, Math.max(min, isNaN(guardado) ? (camEx ? camEx.min : min / 2) : guardado));
     aplicarBrillo();
   }
 }
+const EXTRA_OSCURO = 5;   // pasos extra de oscuridad (cada paso = la mitad de luz)
+let camEx = null, camTiempo = null, camIso = null, camTiempoBase = 0;
 async function aplicarBrillo() {
   const pista = camStream?.getVideoTracks()[0]; if (!pista) return;
   const v = +$('camBrilloValor').value;
-  try { await pista.applyConstraints({ advanced: [{ exposureMode: 'continuous', exposureCompensation: v }] }); } catch {}
-  try { localStorage.setItem('brilloCamara', String(v)); } catch {}
+  const limite = camEx ? camEx.min : 0;
+  try {
+    if (camTiempo && v < limite) {
+      // tiempo de exposición de referencia: el que estaba usando la cámara en automático
+      if (!camTiempoBase) {
+        if (camEx) { try { await pista.applyConstraints({ advanced: [{ exposureMode: 'continuous', exposureCompensation: camEx.min }] }); } catch {} await new Promise(ok => setTimeout(ok, 400)); }
+        camTiempoBase = pista.getSettings?.().exposureTime || Math.min(camTiempo.max, Math.max(camTiempo.min, 100));
+      }
+      const t = Math.max(camTiempo.min, camTiempoBase * Math.pow(2, v - limite));
+      const c = { exposureMode: 'manual', exposureTime: t };
+      if (camIso) c.iso = camIso.min;
+      await pista.applyConstraints({ advanced: [c] });
+    } else {
+      camTiempoBase = 0;
+      await pista.applyConstraints({ advanced: [camEx ? { exposureMode: 'continuous', exposureCompensation: v } : { exposureMode: 'continuous' }] });
+    }
+  } catch {}
+  try { localStorage.setItem('brilloCamara2', String(v)); } catch {}
 }
 $('camBrilloValor').oninput = aplicarBrillo;
 function cerrarCamara() {
@@ -925,6 +963,11 @@ $('camDisparar').onclick = async () => {
   const visibleW = W / k / v.videoWidth;
   const recorte = camModo === 'recuadro' ? { fw: Math.min(1, guia.width / W * visibleW * 1.35), fh: Math.min(1, guia.height / H * visibleH * 1.6) } : null;
   let banda = Math.min(0.7, (guia.height / H) * visibleH * 2.2);   // franja del recuadro con margen
+  const bandaCuadro = banda;
+  // El cuadro del video tal como se ve en pantalla (con el brillo elegido): algunas cámaras sacan la foto grande con su propio brillo
+  const cv = document.createElement('canvas'); cv.width = v.videoWidth; cv.height = v.videoHeight;
+  cv.getContext('2d').drawImage(v, 0, 0);
+  const cuadro = await new Promise(ok => cv.toBlob(ok, 'image/jpeg', 0.95));
   let foto = null;
   // Foto con la máxima calidad de la cámara; si no se puede, el cuadro del video
   try {
@@ -934,13 +977,9 @@ $('camDisparar').onclick = async () => {
       banda = Math.min(0.7, banda * 1.3);
     }
   } catch {}
-  if (!foto) {
-    const c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight;
-    c.getContext('2d').drawImage(v, 0, 0);
-    foto = await new Promise(ok => c.toBlob(ok, 'image/jpeg', 0.95));
-  }
   cerrarCamara();
-  if (foto) leerImagen(foto, recorte ? null : banda, recorte);
+  if (!foto) leerImagen(cuadro, recorte ? null : bandaCuadro, recorte);
+  else leerImagen(foto, recorte ? null : banda, recorte, recorte || !cuadro ? null : { blob: cuadro, banda: bandaCuadro });
 };
 $('escFoto').onclick = () => abrirCamara('fila');
 $('escImagen').onclick = () => $('escArchivo2').click();
