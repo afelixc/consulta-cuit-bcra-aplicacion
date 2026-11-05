@@ -11,6 +11,8 @@ import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import com.google.android.gms.common.moduleinstall.ModuleInstall;
+import com.google.android.gms.common.moduleinstall.ModuleInstallRequest;
 import com.google.mlkit.vision.common.InputImage;
 import com.google.mlkit.vision.text.Text;
 import com.google.mlkit.vision.text.TextRecognition;
@@ -24,6 +26,21 @@ import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
  */
 @CapacitorPlugin(name = "LeerTexto")
 public class LeerTextoPlugin extends Plugin {
+
+    /** Pide a los Servicios de Google que bajen el lector de texto (si ya está, no hace nada). */
+    private void pedirDescarga(TextRecognizer lector) {
+        try {
+            ModuleInstall.getClient(getContext()).installModules(ModuleInstallRequest.newBuilder().addApi(lector).build());
+        } catch (Exception ignorado) { }
+    }
+
+    @Override
+    public void load() {
+        TextRecognizer lector = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
+        ModuleInstall.getClient(getContext()).areModulesAvailable(lector)
+            .addOnSuccessListener(r -> { if (!r.areModulesAvailable()) pedirDescarga(lector); })
+            .addOnFailureListener(e -> pedirDescarga(lector));
+    }
 
     @PluginMethod
     public void leer(PluginCall call) {
@@ -69,8 +86,9 @@ public class LeerTextoPlugin extends Plugin {
                 lector.close();
             })
             .addOnFailureListener(e -> {
-                call.reject("No se pudo leer: " + e.getMessage());
-                lector.close();
+                // Lo más común: el teléfono todavía no bajó el lector de texto de Google. Se lo pide y se avisa.
+                pedirDescarga(lector);
+                call.reject("No se pudo leer: " + e.getMessage() + " (si dice que falta descargar, conectate a internet, esperá un par de minutos y probá de nuevo)");
             });
     }
 }

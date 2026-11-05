@@ -720,26 +720,31 @@ function datosDelRecuadro(texto) {
   const t = String(texto || '')
     .replace(/[OoQD](?=[\d\s-]*\d)|(?<=\d[\d\s-]*)[OoQD]/g, '0')   // O leída en lugar de 0
     .replace(/(?<=\d)[lI|](?=\d)/g, '1');
-  const ruta = /(?<!\d)(\d{3})\s*[-–—.]\s*(\d{3})\s*[-–—.]\s*(\d{4})(?!\d)/.exec(t);
+  // banco-sucursal-código postal; a veces el lector pega el dígito verificador ("2589 9" → "25899") o cambia el guion por espacio
+  const ruta = /(?<!\d)(\d{3})\s*[-–—.:_\s]\s*(\d{3})\s*[-–—.:_\s]\s*(\d{4})(?:\s?\d)?(?!\d)/.exec(t);
   if (!ruta) return null;
   // El número de cheque está impreso varias veces (Serie N°, recuadro, talón): se toma el de 8 cifras que más se repite
   const veces = {};
   for (const m of t.matchAll(/(?<![\d-])(\d{8})(?![\d-])/g)) veces[m[1]] = (veces[m[1]] || 0) + 1;
-  const cheque = Object.keys(veces).sort((a, b) => veces[b] - veces[a])[0];
+  let cheque = Object.keys(veces).sort((a, b) => veces[b] - veces[a])[0];
+  // si el lector pegó el dígito verificador ("00252619 5" → "002526195"), se toman las primeras 8 cifras
+  if (!cheque) cheque = /(?<![\d-])(\d{8})\d(?![\d-])/.exec(t.replace(ruta[0], ' '))?.[1];
   if (!cheque) return null;
   // La cuenta va en el recuadro con su dígito verificador al lado ("00000019930 0"); no confundir con el CUIT del titular
-  const once = [...t.matchAll(/(CUI[TL]\W*)?(?<![\d-])(\d{11})(?![\d-])(\s+\d(?!\d))?/g)].filter(m => !m[1]);
+  const once = [...t.matchAll(/(CUI[TL]\W*)?(?<![\d-])(\d{11})(\s*\d)?(?![\d-])/g)].filter(m => !m[1]);
   const cuenta = (once.find(m => m[3]) || once.find(m => !cuitValido(m[2])))?.[2] || '';
   return { banco: ruta[1], sucursal: ruta[2], cp: ruta[3], cheque, cuenta, todo: ruta[1] + ruta[2] + ruta[3] + cheque + cuenta, origen: 'recuadro' };
 }
 
 // Pasa un pedazo de la foto por el lector de texto y busca los datos del recuadro
+let ultimaLectura = '';   // lo último que leyó el lector de texto (se muestra si no se pudo leer, para ver qué pasó)
 async function recuadroEnCanvas(c) {
   try {
     const { texto } = await lectorTexto.leer({ imagen: c.toDataURL('image/jpeg', 0.92).split(',')[1] });
+    ultimaLectura = texto || '(no encontró ningún texto en la foto)';
     const r = datosDelRecuadro(texto);
     if (r && (!bancos || bancos.some(b => b.codigo === +r.banco))) return r;
-  } catch {}
+  } catch (e) { ultimaLectura = 'Error del lector de texto: ' + (e?.message || e); }
   return null;
 }
 // Recorta el centro de la foto (fw x fh = fracción del ancho y del alto), achicado a máx. 2000 px
@@ -757,9 +762,10 @@ async function leerRecuadro(img, giros) {
     try {
       const c = fotoEnCanvas(img, giro, 2000);
       const { texto } = await lectorTexto.leer({ imagen: c.toDataURL('image/jpeg', 0.9).split(',')[1] });
+      if (!ultimaLectura || /^\(no|^Error/.test(ultimaLectura)) ultimaLectura = texto || '(no encontró ningún texto en la foto)';
       const r = datosDelRecuadro(texto);
       if (r && (!bancos || bancos.some(b => b.codigo === +r.banco))) return r;
-    } catch {}
+    } catch (e) { if (!ultimaLectura) ultimaLectura = 'Error del lector de texto: ' + (e?.message || e); }
   }
   return null;
 }
@@ -790,6 +796,7 @@ async function leerImagen(f, banda, recorte) {
   $('escFoto').disabled = $('escImagen').disabled = $('escRecuadro').disabled = true;
   await cargarBancos();
   let r = null;
+  ultimaLectura = '';
   try {
     const img = await new Promise((ok, mal) => { const i = new Image(); i.onload = () => ok(i); i.onerror = mal; i.src = vista.src; });
     // Si la foto es vertical, el cheque seguramente está de costado: se prueba girado primero
@@ -827,7 +834,8 @@ async function leerImagen(f, banda, recorte) {
     : '<button class="btn sec chico" id="escOtro" style="width:100%;margin-top:8px">🔲 Probar con el recuadro de números (arriba a la derecha)</button>';
   setTimeout(() => { const b = $('escOtro'); if (b) b.onclick = () => abrirCamara(ultimoModo === 'recuadro' ? 'fila' : 'recuadro'); });
   est.innerHTML = `<span class="rojo"><b>No pude leer los números del cheque.</b></span>${otro}<br>Probá otra vez:
-    <ul style="margin:6px 0 0;padding-left:18px"><li>cheque apoyado en una mesa, con buena luz, sin sombra ni reflejo</li><li>${ultimoModo === 'recuadro' ? 'el recuadro de números entero dentro del marco blanco' : 'la fila de números de abajo dentro del recuadro, ocupando todo el ancho'}</li><li>tocá la pantalla para enfocar antes de sacar</li></ul>`;
+    <ul style="margin:6px 0 0;padding-left:18px"><li>cheque apoyado en una mesa, con buena luz, sin sombra ni reflejo</li><li>${ultimoModo === 'recuadro' ? 'el recuadro de números entero dentro del marco blanco' : 'la fila de números de abajo dentro del recuadro, ocupando todo el ancho'}</li><li>tocá la pantalla para enfocar antes de sacar</li></ul>
+    ${lectorTexto ? `<details class="ayuda-mas"><summary>Ver qué leyó la app (para avisar si falla)</summary><pre style="white-space:pre-wrap;font-size:12px;margin:6px 0 0">${esc((ultimaLectura || '(el lector de texto no se usó)').slice(0, 800))}</pre></details>` : ''}`;
   $('escFoto').lastChild.textContent = 'Sacar otra foto';
 }
 
