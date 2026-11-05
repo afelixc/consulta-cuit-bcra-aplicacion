@@ -858,6 +858,7 @@ function chequeLeido(r) {
 
 $('modoManual').onclick = () => modoCheque(false);
 $('modoEscanear').onclick = () => { modoCheque(true); revisarLector(); };
+$('solCheq').addEventListener('click', () => { if (!$('cheqEscanear').hidden) revisarLector(); });
 // ---------- Cámara propia (con recuadro). Si el teléfono no la deja usar, se abre la cámara normal ----------
 let camStream = null, camLuz = false, camModo = 'fila';
 async function abrirCamara(modo) {
@@ -934,9 +935,11 @@ if (!lectorTexto) $('escRecuadro').parentElement.hidden = true;   // el lector d
 // Muestra si el teléfono ya tiene el lector de texto de Google y, si no, un botón para bajarlo
 async function revisarLector() {
   const caja = $('estadoLector');
-  if (!lectorTexto?.estado) return;
+  if (!lectorTexto) return;
+  caja.hidden = false;
+  caja.innerHTML = 'Revisando si el teléfono tiene el lector de texto…';
   let listo = false;
-  try { listo = (await lectorTexto.estado()).listo; } catch (e) { caja.hidden = false; caja.innerHTML = `<span class="naranja">No se pudo saber si está el lector de texto: ${esc(e?.message || e)}</span>`; return; }
+  try { listo = (await Promise.race([lectorTexto.estado(), new Promise((_, mal) => setTimeout(() => mal(new Error('los Servicios de Google no respondieron')), 10000))])).listo; } catch (e) { caja.hidden = false; caja.innerHTML = `<span class="naranja">No se pudo saber si está el lector de texto: ${esc(e?.message || e)}</span>`; return; }
   caja.hidden = false;
   if (listo) { caja.innerHTML = '<span class="verde"><b>✔ Lector de texto listo</b></span>'; return; }
   caja.innerHTML = `<span class="naranja"><b>Falta descargar el lector de texto de Google</b> (una sola vez, con internet). Sin él no se puede leer el recuadro.</span>
