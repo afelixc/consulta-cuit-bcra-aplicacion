@@ -11,7 +11,10 @@ import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import com.google.android.gms.common.moduleinstall.InstallStatusListener;
 import com.google.android.gms.common.moduleinstall.ModuleInstall;
+import com.google.android.gms.common.moduleinstall.ModuleInstallClient;
+import com.google.android.gms.common.moduleinstall.ModuleInstallStatusUpdate;
 import com.google.android.gms.common.moduleinstall.ModuleInstallRequest;
 import com.google.mlkit.vision.common.InputImage;
 import com.google.mlkit.vision.text.Text;
@@ -40,6 +43,59 @@ public class LeerTextoPlugin extends Plugin {
         ModuleInstall.getClient(getContext()).areModulesAvailable(lector)
             .addOnSuccessListener(r -> { if (!r.areModulesAvailable()) pedirDescarga(lector); })
             .addOnFailureListener(e -> pedirDescarga(lector));
+    }
+
+    /** ¿El teléfono ya tiene el lector de texto? → { listo: true/false } */
+    @PluginMethod
+    public void estado(PluginCall call) {
+        TextRecognizer lector = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
+        ModuleInstall.getClient(getContext()).areModulesAvailable(lector)
+            .addOnSuccessListener(r -> {
+                JSObject o = new JSObject();
+                o.put("listo", r.areModulesAvailable());
+                call.resolve(o);
+            })
+            .addOnFailureListener(e -> call.reject("No se pudo consultar a los Servicios de Google: " + e.getMessage()));
+    }
+
+    /** Baja el lector de texto y avisa cuando terminó → { listo: true } */
+    @PluginMethod
+    public void descargar(PluginCall call) {
+        TextRecognizer lector = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
+        final ModuleInstallClient cliente = ModuleInstall.getClient(getContext());
+        final InstallStatusListener[] escucha = new InstallStatusListener[1];
+        final boolean[] terminado = { false };
+        escucha[0] = actualizacion -> {
+            int estado = actualizacion.getInstallState();
+            if (terminado[0]) return;
+            if (estado == ModuleInstallStatusUpdate.InstallState.STATE_COMPLETED) {
+                terminado[0] = true;
+                cliente.unregisterListener(escucha[0]);
+                JSObject o = new JSObject();
+                o.put("listo", true);
+                call.resolve(o);
+            } else if (estado == ModuleInstallStatusUpdate.InstallState.STATE_FAILED || estado == ModuleInstallStatusUpdate.InstallState.STATE_CANCELED) {
+                terminado[0] = true;
+                cliente.unregisterListener(escucha[0]);
+                call.reject("La descarga no se pudo completar (código " + actualizacion.getErrorCode() + ")");
+            }
+        };
+        ModuleInstallRequest pedido = ModuleInstallRequest.newBuilder().addApi(lector).setListener(escucha[0]).build();
+        cliente.installModules(pedido)
+            .addOnSuccessListener(r -> {
+                if (r.areModulesAlreadyInstalled() && !terminado[0]) {
+                    terminado[0] = true;
+                    cliente.unregisterListener(escucha[0]);
+                    JSObject o = new JSObject();
+                    o.put("listo", true);
+                    call.resolve(o);
+                }
+            })
+            .addOnFailureListener(e -> {
+                if (terminado[0]) return;
+                terminado[0] = true;
+                call.reject("No se pudo pedir la descarga: " + e.getMessage());
+            });
     }
 
     @PluginMethod
