@@ -9,6 +9,8 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         // Lector de texto propio de la app (para el recuadro de números del cheque)
         registerPlugin(LeerTextoPlugin.class);
+        // Abre páginas externas (CUIT Online) con Chrome en vez del navegador de Samsung
+        registerPlugin(AbrirWebPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

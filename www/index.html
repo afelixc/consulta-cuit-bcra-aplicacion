@@ -714,6 +714,8 @@ function fotoEnCanvas(img, giro, max = 3200) {
 
 // Lector de texto de Android (ML Kit, en LeerTextoPlugin.java). En la versión web/Windows no existe.
 const lectorTexto = window.Capacitor?.isNativePlatform?.() && window.Capacitor.registerPlugin ? window.Capacitor.registerPlugin('LeerTexto') : null;
+// Abre páginas externas con Chrome (AbrirWebPlugin.java). En la versión web/Windows no existe.
+const abrirWeb = window.Capacitor?.isNativePlatform?.() && window.Capacitor.registerPlugin ? window.Capacitor.registerPlugin('AbrirWeb') : null;
 
 // Busca en el texto del cheque el recuadro de arriba a la derecha:
 //   020-317-2686 5   (banco - sucursal - código postal, dígito verificador)
@@ -1056,7 +1058,9 @@ document.addEventListener('click', e => {
   let nombre = $(b.dataset.campo).value.trim();
   if (!/[a-záéíóúñ]/i.test(nombre)) nombre = prompt('Escribí el nombre, apellido o razón social a buscar.\n\nSe abre la página CUIT Online (no es oficial). Ahí copiás el CUIT y lo pegás acá.\n\nSi la página te pide desactivar el bloqueador de anuncios, desactivalo para esa página o abrila con Chrome.') || '';
   nombre = nombre.trim(); if (!nombre) return;
-  location.href = 'https://www.cuitonline.com/search.php?q=' + encodeURIComponent(nombre).replace(/%20/g, '+');
+  const url = 'https://www.cuitonline.com/search.php?q=' + encodeURIComponent(nombre).replace(/%20/g, '+');
+  if (abrirWeb) abrirWeb.abrir({ url }).catch(() => { location.href = url; });   // en el teléfono: con Chrome
+  else location.href = url;
 });
 async function copiar(texto) {
   try {
