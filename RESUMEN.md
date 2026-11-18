@@ -1,58 +1,46 @@
 # Resumen de sesión
-_Última actualización: 2026-11-18 (versión 1.8)_
+_Última actualización: 2026-11-18_
 
 ## Objetivo
-Mantener y mejorar la app Android **INVESTI-CUIT** (antes "Consulta CUIT BCRA"). Tiene tres solapas: Informe BCRA, Cheques (denunciados, lectura por foto/cámara) y Datos ARCA.
+Mantener y mejorar la app Android **INVESTI-CUIT** (Informe BCRA, Cheques y Datos ARCA). En esta sesión se rehízo el informe por CUIT en "ventanitas" y llegó a la versión 1.8.
 
 ## Contexto clave
-- Repo: afelixc/consulta-cuit-bcra-aplicacion (copia local en /home/user/aplicacion). Hecha con Capacitor 8.
-- Cada push a `main` hace que GitHub Actions compile el APK firmado y publique el release `v1.0.N` (archivo `INVESTI-CUIT.apk`).
-- Link a la última versión: https://github.com/afelixc/consulta-cuit-bcra-aplicacion/releases/latest/download/INVESTI-CUIT.apk
-- Pantalla: `www/index.html`. Código nativo: `android/app/src/main/java/ar/afelixc/consultacuit/` (MainActivity, LeerTextoPlugin, AbrirWebPlugin).
-- Versión hermana para Windows: afelixc/consulta-cuit-bcra-windows. La web es afelixc/consulta-cuit-bcra (solo BCRA y Cheques, sin ARCA).
-- La API del BCRA no responde desde el contenedor; para probar se usa un fetch simulado.
-- No se puede compilar Android acá (no hay SDK); compila GitHub.
+- Repo: afelixc/consulta-cuit-bcra-aplicacion (local: /home/user/consulta-cuit-bcra-aplicacion). Capacitor 8. Pantalla: `www/index.html`.
+- Cada push a `main` compila el APK firmado y publica el release `vX.Y.N` (N = compilación; la app lo usa para avisar que hay versión nueva). Los commits con `[skip ci]` no compilan.
+- Versión visible: archivo `VERSION` + `VERSION_APP` en index.html (tienen que coincidir). Actual: **1.8** (release v1.8.50).
+- Última versión: https://github.com/afelixc/consulta-cuit-bcra-aplicacion/releases/latest/download/INVESTI-CUIT.apk
+- Simulación aprobada (privada): https://claude.ai/artifact/9bYPgxzzdUsbaHKBxe8Tg4
+- Entorno cloud "INVESTI-CUIT y servidor AFC" permite api.bcra.gob.ar, www.boletinoficial.gob.ar y servicioscf.afip.gob.ar (para probar con datos reales).
+- Pruebas: scripts Playwright en el scratchpad con respuestas guardadas del BCRA (PONY SA 30-70861358-0, 209 cheques). El usuario tiene la letra del teléfono grande: revisar siempre en ancho ~280 px.
+- Windows (afelixc/consulta-cuit-bcra-windows) NO tiene la 1.5–1.8: el usuario dijo "solo la aplicación por ahora".
 
 ## Restricciones
-- El usuario no es programador y habla castellano rioplatense: explicar en pasos simples.
-- No cambiar los colores.
-- No tocar `appId` ni la firma, porque se pierden los datos guardados.
-- Nunca subir la clave de firma; vive en los secrets FIRMA_BASE64 y FIRMA_CLAVE.
-- Si se cambia `www/`, preguntar si se pasa a Windows (ver CLAUDE.md).
-- No tocar el repo web salvo pedido.
-- Cuando el usuario dice "no toques nada", solo responder.
+- Usuario no programador, castellano rioplatense: pasos simples.
+- No cambiar colores, `appId` ni la firma (secrets FIRMA_BASE64 / FIRMA_CLAVE).
+- Si se cambia `www/`, preguntar si se pasa a Windows. Simular primero; subir solo cuando dice "subila/dale".
+- Cada actualización sube la versión (1.9, 2.0…).
 
 ## Decisiones tomadas
-- El trabajo de interfaz y la vista previa del 12/11 se descartaron por pedido del usuario. La vista privada sigue publicada en https://claude.ai/artifact/8G4Pvq155N5NfjfXGY226t y se puede borrar si la pide.
-- El botón "buscar por nombre en CUIT Online" (Datos ARCA) ahora abre la página en Chrome. Si el teléfono no tiene Chrome, usa el navegador de siempre. Motivo: el bloqueador de anuncios de Samsung Internet hacía fallar la página.
-- La v1.0.45 queda como respaldo (no se borra): https://github.com/afelixc/consulta-cuit-bcra-aplicacion/releases/download/v1.0.45/INVESTI-CUIT.apk
+- Respaldo de la versión vieja: rama `respaldo-v1.0.46` y release v1.0.46.
+- Números siempre en su propio renglón (cantidad arriba, importe abajo; "millones" abajo del número) — se leían amontonados.
+- "Bancos en juicio": solo datos del BCRA. Boletín Oficial y facturas apócrifas se sacaron (piden captcha, no se pueden consultar solos).
+- El BCRA identifica el banco de cada cheque rechazado con un número (1, 2, 3…) que no es el código del banco: se muestra "Entidad N".
+- Datos de ARCA en el informe solo si el certificado está configurado.
+- Se descartó lo pago (Nosis/Veraz, IA): ~$21.600 por informe Nosis.
 
 ## Hecho
-- **Versión 1.8 (release v1.8.50):** números en su propio renglón (detalle de cheques, deuda mes a mes con "millones" abajo, bancos, por motivo, pagos por banco) y etiquetas de cheques en dos renglones si no entran. El usuario tiene la letra del teléfono grande: probar siempre en ancho angosto (~280 px).
-- **Versión 1.7 (release v1.7.49):** "Juicios y antecedentes" pasó a llamarse "Bancos en juicio" y muestra solo lo del BCRA (se sacaron Boletín Oficial y facturas apócrifas). "Cuándo fueron" tiene franjas 0–30, 31–60, 61–90, 91–180, 181–365 y +365 días, sin la lista de cheques.
-- **Versión 1.6 (18/11/2026, release v1.6.48):** en Cheques rechazados la lista completa pasó a la solapita "Detalle de todos los cheques" (primero se ven Por motivo, Resumen de cheques y Cuándo fueron). Datos de ARCA muestra todas las actividades, también en el PDF. Windows sigue sin estos cambios (el usuario dijo "solo la aplicación por ahora").
-- **Versión 1.5 (18/11/2026, commit 720eaa5):** informe por CUIT rehecho en ventanitas, según la simulación aprobada (https://claude.ai/artifact/9bYPgxzzdUsbaHKBxe8Tg4).
-  - Cartel de cheques rechazados con cantidad e importe en renglones aparte (total, sin pagar, pagados). Al tocarlo: cada cheque en su recuadro con estado, multa y entidad; "Por motivo"; solapitas "Resumen de cheques" y "Cuándo fueron".
-  - Ventanitas: Resumen (se despliega), Situación en bancos, Semáforo de riesgo (puntaje 0–100 explicado), Deuda total mes a mes (barras por situación), Datos de ARCA (solo con certificado configurado; si no, avisa) y Juicios y antecedentes.
-  - Juicios: lo del BCRA se muestra solo (proceso judicial / situación jurídica). Boletín Oficial y facturas apócrifas piden captcha: son botones que abren la página oficial y copian el nombre o el CUIT.
-  - PDF del informe con todo el detalle (sin número de versión).
-  - El BCRA identifica el banco de cada cheque rechazado con un número de entidad (1, 2, 3…) que no es el código del banco: se muestra "Entidad N".
-  - Versión: archivo `VERSION` + `VERSION_APP` en index.html; releases `v1.5.N`.
-  - Respaldo de la versión anterior: rama `respaldo-v1.0.46` y release v1.0.46.
-- v1.0.46 (commit 28b190a) publicada y compilada con éxito. Se agregó `AbrirWebPlugin.java`, se registró en MainActivity y en `index.html` se usa `abrirWeb.abrir({url})`.
-- Revisé el APK v1.0.46 por dentro: dice INVESTI-CUIT, tiene las tres solapas y el cambio de Chrome.
-- Link directo: https://github.com/afelixc/consulta-cuit-bcra-aplicacion/releases/download/v1.0.46/INVESTI-CUIT.apk
-- Le di al usuario guías para apagar bloqueadores en Samsung Internet y para revisar el DNS privado del teléfono.
-- Antes, solo charla, sin hacer nada: versión iPhone, costos de Apple y Play Store, posible clon pago con Mercado Pago y precios.
+- v1.5: informe en ventanitas — cartel de cheques (total, sin pagar, pagados), Resumen desplegable, Situación en bancos, Semáforo de riesgo (0–100 explicado), Deuda mes a mes (barras por situación), Datos de ARCA, PDF completo.
+- v1.6: cheques → Por motivo, "Resumen de cheques", "Cuándo fueron" y "Detalle de todos los cheques" en solapitas; ARCA con todas las actividades.
+- v1.7: "Bancos en juicio" solo BCRA; "Cuándo fueron" con franjas 0–30, 31–60, 61–90, 91–180, 181–365, +365 sin lista.
+- v1.8: arreglo de números amontonados y etiquetas cortadas; revisado en todas las pantallas.
+- Cada APK se bajó y revisó por dentro.
 
 ## En curso / Problemas abiertos
-- Falta que el usuario confirme en el teléfono que la v1.0.46 abre Chrome. Una vez dijo que veía "una app con cosas de menos"; probablemente abrió un APK viejo de Descargas o la versión web.
-- Quedó sin respuesta si este cambio de Chrome se pasa también a Windows. Allá no hace nada: `abrirWeb` es null y abre el navegador como siempre.
-- Problemas chicos detectados en la app real, sin arreglar porque no se pidió:
-  1. Al abrir un cheque guardado estando en modo foto, el formulario queda oculto (agregar `modoCheque(false)` en `abrirGuardado`).
-  2. Con la hoja de Guardados abierta, el fondo se sigue moviendo.
+- Falta que el usuario confirme la v1.8 en el teléfono.
+- Datos de ARCA dentro del informe no se probaron con ARCA real (solo con datos de ejemplo).
+- Pendientes viejos sin pedir: abrir cheque guardado en modo foto deja el formulario oculto; con Guardados abierto el fondo se mueve.
 
 ## Próximos pasos
-1. Esperar que el usuario confirme que la v1.0.46 abre Chrome y que tiene las tres solapas.
-2. Preguntar si quiere el cambio también en Windows.
-3. Ofrecer arreglar los dos problemas chicos (solo si dice que sí).
+1. Esperar fotos/comentarios del usuario sobre la v1.8 y ajustar.
+2. Cuando lo pida, pasar `www/` a la versión Windows.
+3. Ofrecer arreglar los dos pendientes viejos.
