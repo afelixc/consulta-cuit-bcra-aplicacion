@@ -1,5 +1,5 @@
 # Resumen de sesión
-_Última actualización: 2026-11-18_
+_Última actualización: 2026-11-18 (versión 1.5)_
 
 ## Objetivo
 Mantener y mejorar la app Android **INVESTI-CUIT** (antes "Consulta CUIT BCRA"). Tiene tres solapas: Informe BCRA, Cheques (denunciados, lectura por foto/cámara) y Datos ARCA.
@@ -28,6 +28,14 @@ Mantener y mejorar la app Android **INVESTI-CUIT** (antes "Consulta CUIT BCRA").
 - La v1.0.45 queda como respaldo (no se borra): https://github.com/afelixc/consulta-cuit-bcra-aplicacion/releases/download/v1.0.45/INVESTI-CUIT.apk
 
 ## Hecho
+- **Versión 1.5 (18/11/2026, commit 720eaa5):** informe por CUIT rehecho en ventanitas, según la simulación aprobada (https://claude.ai/artifact/9bYPgxzzdUsbaHKBxe8Tg4).
+  - Cartel de cheques rechazados con cantidad e importe en renglones aparte (total, sin pagar, pagados). Al tocarlo: cada cheque en su recuadro con estado, multa y entidad; "Por motivo"; solapitas "Resumen de cheques" y "Cuándo fueron".
+  - Ventanitas: Resumen (se despliega), Situación en bancos, Semáforo de riesgo (puntaje 0–100 explicado), Deuda total mes a mes (barras por situación), Datos de ARCA (solo con certificado configurado; si no, avisa) y Juicios y antecedentes.
+  - Juicios: lo del BCRA se muestra solo (proceso judicial / situación jurídica). Boletín Oficial y facturas apócrifas piden captcha: son botones que abren la página oficial y copian el nombre o el CUIT.
+  - PDF del informe con todo el detalle (sin número de versión).
+  - El BCRA identifica el banco de cada cheque rechazado con un número de entidad (1, 2, 3…) que no es el código del banco: se muestra "Entidad N".
+  - Versión: archivo `VERSION` + `VERSION_APP` en index.html; releases `v1.5.N`.
+  - Respaldo de la versión anterior: rama `respaldo-v1.0.46` y release v1.0.46.
 - v1.0.46 (commit 28b190a) publicada y compilada con éxito. Se agregó `AbrirWebPlugin.java`, se registró en MainActivity y en `index.html` se usa `abrirWeb.abrir({url})`.
 - Revisé el APK v1.0.46 por dentro: dice INVESTI-CUIT, tiene las tres solapas y el cambio de Chrome.
 - Link directo: https://github.com/afelixc/consulta-cuit-bcra-aplicacion/releases/download/v1.0.46/INVESTI-CUIT.apk
