@@ -9,7 +9,8 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         // En GitHub cada compilación sube el número, así el teléfono acepta la actualización
         versionCode((System.getenv("NUMERO_VERSION") ?: "1") as int)
-        versionName "1.0." + (System.getenv("NUMERO_VERSION") ?: "0")
+        // La versión que ve el usuario (1.5, 1.6…) sale del archivo VERSION de la raíz del proyecto
+        versionName new File(rootDir.parentFile, "VERSION").text.trim()
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
