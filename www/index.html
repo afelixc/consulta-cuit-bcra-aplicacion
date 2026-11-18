@@ -653,7 +653,7 @@ function guardarCuit() {
 
 
 // ---------- Informe por CUIT (versión 1.5): ventanitas, detalle y PDF ----------
-const VERSION_APP = '1.5';
+const VERSION_APP = '1.6';
 let INF = null, VISTA_INF = 'inicio', ABIERTO = {};
 const COLSIT = ['#9AA3AE', '#2E9E5B', '#E5B01E', '#EF7A1A', '#E0482B', '#B71C1C', '#7F1010'];
 const colSit = s => COLSIT[Math.min(6, Math.max(0, +s || 0))];
@@ -774,6 +774,7 @@ async function datosArcaInforme(cuit) {
     ganancias: ids.includes('10') || ids.includes('11') ? 'Inscripto' : esMono ? 'No (monotributo)' : 'No inscripto',
     empleador: ids.includes('301') ? 'Sí' : 'No',
     actividad: acts[0] ? val(acts[0], 'descripcionActividad') : '', codigo: acts[0] ? val(acts[0], 'idActividad') : '', otras: acts.length - 1,
+    acts: acts.map(x => ({ cod: val(x, 'idActividad'), d: val(x, 'descripcionActividad'), desde: /^\d{6}$/.test(val(x, 'periodo')) ? periodo(val(x, 'periodo')) : '', principal: val(x, 'orden') === '1' })),
     domicilio: dom ? [val(dom, 'direccion'), val(dom, 'localidad'), prov].filter(Boolean).join(', ') : '',
     cierre: +val(g, 'mesCierre') ? MESES[+val(g, 'mesCierre')] : ''
   };
@@ -858,10 +859,6 @@ function htmlDetalleInforme(v) {
     const G = grupo(L), pc = pctDe(G.pn, G.n), pm = pctDe(G.pm, G.m);
     const rec = k.franjas.slice(0, 3).reduce((s, f) => s + f.cs.length, 0), vie = L.length - rec, maxF = Math.max(1, ...k.franjas.map(f => f.cs.length));
     return `<div class="estado mal" style="margin-top:0;margin-bottom:10px">✖ ${L.length} cheques · ${plata(k.tot)}<small>Levantados ${k.pag.length} (${plata(k.totPag)}) · sin pagar ${k.imp.length} (${plata(k.totImp)})</small></div>
-      <div class="i-tarj"><div class="i-tit">Todos los cheques</div>${L.map(c => `<div class="i-cq"><div class="i-fila"><b>Cheque ${esc(c.nro)}</b><span class="i-monto">${plata(c.monto)}</span></div>
-        <div class="i-gris">Rechazado ${fecha(c.rechazo)} · hace ${diasDesde(c.rechazo)} días · ${esc(c.causal.toLowerCase())}</div>
-        <div class="i-pills">${c.pago ? `<span class="i-pill v">PAGÓ ${fechaCorta(c.pago)}</span>` : '<span class="i-pill r">SIN PAGAR</span>'}<span class="i-pill ${c.multa === 'Impaga' ? 'r' : c.multa === 'Pagada' ? 'v' : 'n'}">${c.multa === 'Sin multa' ? 'Sin multa' : 'Multa ' + c.multa.toLowerCase()}</span><span class="i-pill b" title="${esc(etiquetaBanco(c.banco, c.cod))}">${esc(etiquetaBanco(c.banco.replace(/^BANCO (DE LA |DEL |DE )?/i, ''), c.cod))}</span></div>
-        ${c.procesoJud ? '<div class="i-alerta" style="font-size:12.5px;margin-top:4px">⚖ En proceso judicial</div>' : ''}</div>`).join('')}</div>
       <div class="i-tarj"><div class="i-tit">Por motivo</div><div class="i-motivos">${k.motivos.map((x, i) => `<div><span><i class="i-punto" style="background:${i ? COLSIT[2] : COLSIT[4]}"></i>${esc(x.m.charAt(0) + x.m.slice(1).toLowerCase())}<em>${x.cs.length} cheques</em></span><b>${plata(sumaMonto(x.cs))}</b></div>`).join('')}</div></div>
       <div>${tile('abrir:chqres', 'var(--azul)', ICO.barras, 'Resumen de cheques', `Pagó ${G.pn} de ${G.n} (${pc} %) · ${ABIERTO.chqres ? 'tocar para cerrar' : 'tocar para ver'}`, !!ABIERTO.chqres)}
       ${ABIERTO.chqres ? `<div class="i-tarj" style="margin-top:8px"><div class="i-tit">Totales</div>
@@ -880,7 +877,12 @@ function htmlDetalleInforme(v) {
           <div class="i-fr-bar"><div class="i-barra" style="height:10px"><i style="width:${f.cs.length / maxF * 100}%;background:${imp ? COLSIT[4] : COLSIT[1]}"></i></div><b>${f.cs.length}</b></div>
           ${f.cs.length ? `<small>${f.cs.length} ${f.cs.length === 1 ? 'cheque rechazado' : 'cheques rechazados'} · ${plata(sumaMonto(f.cs))} · ${imp ? `<span style="color:var(--rojo)">${imp} sin pagar</span>` : '<span style="color:var(--ok)">todos pagados</span>'}</small>
           ${f.cs.map(c => `<div class="i-fr-ch"><span><b>Cheque ${esc(c.nro)} · ${plata(c.monto)}</b><br>${fecha(c.rechazo)} · hace ${diasDesde(c.rechazo)} días</span><span class="i-pill ${c.pago ? 'v' : 'r'}">${c.pago ? 'PAGÓ' : 'SIN PAGAR'}</span></div>`).join('')}` : '<small>Ningún cheque rechazado en esta franja</small>'}</div>`; }).join('')}
-        <div class="i-signif ${rec > vie ? 'mal' : 'ojo'}">${rec > vie ? `<b>Problemas recientes:</b> ${rec} de los ${L.length} rechazos son de los últimos 6 meses.` : `<b>Problemas más viejos:</b> ${vie} de los ${L.length} rechazos tienen más de 6 meses${k.franjas[0].cs.length ? '' : ', y en el último mes no tuvo ninguno'}.`}</div></div>` : ''}</div>`;
+        <div class="i-signif ${rec > vie ? 'mal' : 'ojo'}">${rec > vie ? `<b>Problemas recientes:</b> ${rec} de los ${L.length} rechazos son de los últimos 6 meses.` : `<b>Problemas más viejos:</b> ${vie} de los ${L.length} rechazos tienen más de 6 meses${k.franjas[0].cs.length ? '' : ', y en el último mes no tuvo ninguno'}.`}</div></div>` : ''}</div>
+      <div style="margin-top:10px">${tile('abrir:todos', 'var(--azul)', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 14h5M15 11h3M15 14h3"/></svg>', 'Detalle de todos los cheques', `${L.length} cheques · ${ABIERTO.todos ? 'tocar para cerrar' : 'tocar para ver'}`, !!ABIERTO.todos)}
+      ${ABIERTO.todos ? `<div class="i-tarj" style="margin-top:8px">${L.map(c => `<div class="i-cq"><div class="i-fila"><b>Cheque ${esc(c.nro)}</b><span class="i-monto">${plata(c.monto)}</span></div>
+        <div class="i-gris">Rechazado ${fecha(c.rechazo)} · hace ${diasDesde(c.rechazo)} días · ${esc(c.causal.toLowerCase())}</div>
+        <div class="i-pills">${c.pago ? `<span class="i-pill v">PAGÓ ${fechaCorta(c.pago)}</span>` : '<span class="i-pill r">SIN PAGAR</span>'}<span class="i-pill ${c.multa === 'Impaga' ? 'r' : c.multa === 'Pagada' ? 'v' : 'n'}">${c.multa === 'Sin multa' ? 'Sin multa' : 'Multa ' + c.multa.toLowerCase()}</span><span class="i-pill b" title="${esc(etiquetaBanco(c.banco, c.cod))}">${esc(etiquetaBanco(c.banco.replace(/^BANCO (DE LA |DEL |DE )?/i, ''), c.cod))}</span></div>
+        ${c.procesoJud ? '<div class="i-alerta" style="font-size:12.5px;margin-top:4px">⚖ En proceso judicial</div>' : ''}</div>`).join('')}</div>` : ''}</div>`;
   }
   if (v === 'bancos') {
     if (!INF.per) return `<div class="estado bien" style="margin-top:0">✔ No registra deudas en bancos</div>`;
@@ -924,8 +926,10 @@ function htmlDetalleInforme(v) {
     const d = a.d, c = (t, x, todo) => x ? `<div${todo ? ' class="todo"' : ''}>${t}<b>${esc(x)}</b></div>` : '';
     return `<div class="i-tarj"><div class="i-arca">
       ${c('Estado del CUIT', d.estado)}${c('Tipo', d.tipo)}${c('IVA', d.iva)}${c('Ganancias', d.ganancias)}${c('Empleador', d.empleador)}${c('Inscripto desde', d.desde)}
-      ${c('Código de actividad', d.codigo)}${c('Cierre de ejercicio', d.cierre)}
-      ${c('Actividad principal' + (d.otras > 0 ? ` (y ${d.otras} más)` : ''), d.actividad, true)}${c('Domicilio fiscal', d.domicilio, true)}</div>
+      ${c('Actividades', String(d.acts.length))}${c('Cierre de ejercicio', d.cierre)}
+      ${c('Domicilio fiscal', d.domicilio, true)}</div>
+      <div class="i-tit" style="margin-top:14px">Actividades (${d.acts.length})</div>
+      ${d.acts.map(x => `<div class="i-fac"><div class="i-fila"><span style="min-width:0">${esc(x.d)}</span>${x.principal ? '<span class="i-pill v" style="flex:none;align-self:flex-start;padding:3px 6px">PRINCIPAL</span>' : ''}</div><small>Código ${esc(x.cod)}${x.desde ? ' · desde ' + x.desde : ''}</small></div>`).join('') || '<div class="i-nota">ARCA no informa actividades.</div>'}
       <div class="i-nota"><b>Fuente:</b> ARCA · padrón (constancia de inscripción). «Empleador: Sí» quiere decir que está inscripto para pagar aportes de empleados; ARCA no informa cuántos tiene.</div>
       <button class="btn sec" style="width:100%;margin-top:10px" data-iv="ir-arca">Ver la constancia completa</button></div>`;
   }
@@ -984,7 +988,7 @@ function htmlPdfInforme() {
       ${INF.serie.length ? `<h4>Mes a mes</h4><table><thead><tr><th>Mes</th><th class="n">Deuda</th><th class="n">Peor sit.</th><th>Mes</th><th class="n">Deuda</th><th class="n">Peor sit.</th></tr></thead><tbody>
         ${(() => { const s = INF.serie, m = Math.ceil(s.length / 2); return Array.from({ length: m }, (_, j) => [s[j], s[j + m]].map(x => x ? `<td>${periodo(x.p)}</td><td class="n">${plata(x.total)}</td><td class="n">${chip(x.s)}</td>` : '<td></td><td></td><td></td>').join('')).map(x => `<tr>${x}</tr>`).join(''); })()}</tbody></table>` : ''}
       <h4>Semáforo: cómo se calculó</h4><table><tbody><tr><td>Arranca con</td><td class="n">100</td></tr>${P.f.map(x => `<tr><td>${x[0]}</td><td class="n">${x[1] < 0 ? x[1] : 0}</td></tr>`).join('')}<tr><th>Puntaje</th><th class="n">${P.p} / 100</th></tr></tbody></table>
-      ${a.estado === 'ok' ? `<h4>Datos de ARCA</h4><table><tbody>${[['Estado', a.d.estado], ['Tipo', a.d.tipo], ['IVA', a.d.iva], ['Ganancias', a.d.ganancias], ['Empleador', a.d.empleador], ['Inscripto desde', a.d.desde], ['Actividad', [a.d.codigo, a.d.actividad].filter(Boolean).join(' · ')], ['Domicilio fiscal', a.d.domicilio]].filter(x => x[1]).map(x => `<tr><td>${x[0]}</td><td>${esc(x[1])}</td></tr>`).join('')}</tbody></table>` : ''}
+      ${a.estado === 'ok' ? `<h4>Datos de ARCA</h4><table><tbody>${[['Estado', a.d.estado], ['Tipo', a.d.tipo], ['IVA', a.d.iva], ['Ganancias', a.d.ganancias], ['Empleador', a.d.empleador], ['Inscripto desde', a.d.desde], ['Domicilio fiscal', a.d.domicilio], ...a.d.acts.map((x, i) => [i ? '' : `Actividades (${a.d.acts.length})`, `${x.cod} · ${x.d}${x.principal ? ' (principal)' : ''}${x.desde ? ' · desde ' + x.desde : ''}`])].filter(x => x[1]).map(x => `<tr><td>${x[0]}</td><td>${esc(x[1])}</td></tr>`).join('')}</tbody></table>` : ''}
       <h4>Juicios y antecedentes</h4><table><tbody>
         <tr><td>Bancos que lo llevaron a juicio (BCRA)</td><td style="font-weight:700;color:${INF.juicioBancos.length ? '#B22222' : '#1E7A46'}">${INF.juicioBancos.length ? esc(INF.juicioBancos.join(', ')) : 'Ninguno'}</td></tr>
         <tr><td>Cheques rechazados en proceso judicial</td><td style="font-weight:700">${INF.juicioCheques.length || 'Ninguno'}</td></tr></tbody></table>
