@@ -1,5 +1,5 @@
 # Resumen de sesión
-_Última actualización: 2026-11-18 (versión 1.7)_
+_Última actualización: 2026-11-18 (versión 1.8)_
 
 ## Objetivo
 Mantener y mejorar la app Android **INVESTI-CUIT** (antes "Consulta CUIT BCRA"). Tiene tres solapas: Informe BCRA, Cheques (denunciados, lectura por foto/cámara) y Datos ARCA.
@@ -28,6 +28,7 @@ Mantener y mejorar la app Android **INVESTI-CUIT** (antes "Consulta CUIT BCRA").
 - La v1.0.45 queda como respaldo (no se borra): https://github.com/afelixc/consulta-cuit-bcra-aplicacion/releases/download/v1.0.45/INVESTI-CUIT.apk
 
 ## Hecho
+- **Versión 1.8 (release v1.8.50):** números en su propio renglón (detalle de cheques, deuda mes a mes con "millones" abajo, bancos, por motivo, pagos por banco) y etiquetas de cheques en dos renglones si no entran. El usuario tiene la letra del teléfono grande: probar siempre en ancho angosto (~280 px).
 - **Versión 1.7 (release v1.7.49):** "Juicios y antecedentes" pasó a llamarse "Bancos en juicio" y muestra solo lo del BCRA (se sacaron Boletín Oficial y facturas apócrifas). "Cuándo fueron" tiene franjas 0–30, 31–60, 61–90, 91–180, 181–365 y +365 días, sin la lista de cheques.
 - **Versión 1.6 (18/11/2026, release v1.6.48):** en Cheques rechazados la lista completa pasó a la solapita "Detalle de todos los cheques" (primero se ven Por motivo, Resumen de cheques y Cuándo fueron). Datos de ARCA muestra todas las actividades, también en el PDF. Windows sigue sin estos cambios (el usuario dijo "solo la aplicación por ahora").
 - **Versión 1.5 (18/11/2026, commit 720eaa5):** informe por CUIT rehecho en ventanitas, según la simulación aprobada (https://claude.ai/artifact/9bYPgxzzdUsbaHKBxe8Tg4).
