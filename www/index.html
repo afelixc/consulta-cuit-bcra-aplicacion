@@ -653,7 +653,7 @@ function guardarCuit() {
 
 
 // ---------- Informe por CUIT (versión 1.5): ventanitas, detalle y PDF ----------
-const VERSION_APP = '1.6';
+const VERSION_APP = '1.7';
 let INF = null, VISTA_INF = 'inicio', ABIERTO = {};
 const COLSIT = ['#9AA3AE', '#2E9E5B', '#E5B01E', '#EF7A1A', '#E0482B', '#B71C1C', '#7F1010'];
 const colSit = s => COLSIT[Math.min(6, Math.max(0, +s || 0))];
@@ -685,7 +685,7 @@ function cuentasCheques(lista) {
   const dem = pag.map(c => Math.round((Date.parse(c.pago) - Date.parse(c.rechazo)) / 864e5)).filter(x => x >= 0);
   const motivos = [...new Set(lista.map(c => c.causal))].map(m => ({ m, cs: lista.filter(c => c.causal === m) }));
   const bancos = [...new Set(lista.map(c => c.banco))].map(n => ({ n, cod: lista.find(c => c.banco === n).cod, cs: lista.filter(c => c.banco === n) }));
-  const FR = [['0–30 días', 'el último mes', 0, 30], ['31–90 días', 'de 1 a 3 meses', 31, 90], ['91–180 días', 'de 3 a 6 meses', 91, 180], ['181–365 días', 'de 6 meses a 1 año', 181, 365], ['+365 días', 'más de 1 año', 366, 1e9]];
+  const FR = [['0–30 días', 'el último mes', 0, 30], ['31–60 días', 'de 1 a 2 meses', 31, 60], ['61–90 días', 'de 2 a 3 meses', 61, 90], ['91–180 días', 'de 3 a 6 meses', 91, 180], ['181–365 días', 'de 6 meses a 1 año', 181, 365], ['+365 días', 'más de 1 año', 366, 1e9]];
   const franjas = FR.map(([t, de, a, b]) => { const cs = lista.filter(c => { const x = diasDesde(c.rechazo); return x >= a && x <= b; }).sort((p, q) => String(q.rechazo).localeCompare(String(p.rechazo))); return { t, de, cs }; });
   const ult = lista.map(c => c.rechazo).sort().pop();
   return { pag, imp, tot: sumaMonto(lista), totPag: sumaMonto(pag), totImp: sumaMonto(imp), prom: dem.length ? Math.round(dem.reduce((a, b) => a + b, 0) / dem.length) : 0,
@@ -783,7 +783,7 @@ async function datosArcaInforme(cuit) {
 function pintarInforme(quieto) {
   if (!INF) return;
   const res = $('resCuit');
-  res.innerHTML = VISTA_INF === 'inicio' ? htmlInicioInforme() : `<div class="i-cab"><button class="i-volver" id="iVolver">‹ Volver</button><h3>${{ cheques: 'Cheques rechazados', bancos: 'Situación en bancos', riesgo: 'Semáforo de riesgo', deuda: 'Deuda total mes a mes', arca: 'Datos de ARCA', juicios: 'Juicios y antecedentes' }[VISTA_INF]}</h3></div>${htmlDetalleInforme(VISTA_INF)}`;
+  res.innerHTML = VISTA_INF === 'inicio' ? htmlInicioInforme() : `<div class="i-cab"><button class="i-volver" id="iVolver">‹ Volver</button><h3>${{ cheques: 'Cheques rechazados', bancos: 'Situación en bancos', riesgo: 'Semáforo de riesgo', deuda: 'Deuda total mes a mes', arca: 'Datos de ARCA', juicios: 'Bancos en juicio' }[VISTA_INF]}</h3></div>${htmlDetalleInforme(VISTA_INF)}`;
   res.querySelectorAll('[data-iv]').forEach(b => b.onclick = () => {
     const v = b.dataset.iv;
     if (v.startsWith('abrir:')) { ABIERTO[v.slice(6)] = !ABIERTO[v.slice(6)]; pintarInforme(true); return; }
@@ -834,7 +834,7 @@ function htmlInicioInforme() {
     ${tile('riesgo', P.nivel[1], ICO.riesgo, `${P.nivel[0]} · ${P.p}/100`, a.estado === 'ok' ? 'Semáforo calculado con BCRA y ARCA' : 'Semáforo calculado con datos del BCRA')}
     ${INF.serie.length ? tile('deuda', 'var(--azul)', ICO.grafico, 'Deuda total mes a mes', `${INF.serie.length} meses${v !== null ? ` · ${v >= 0 ? 'subió' : 'bajó'} ${Math.abs(v)} % en el último año` : ''}`) : ''}
     ${tile('arca', 'var(--violeta)', ICO.arca, 'Datos de ARCA', subArca)}
-    ${tile('juicios', nJ ? 'var(--rojo)' : 'var(--ok)', ICO.juicio, 'Juicios y antecedentes', nJ ? `${INF.juicioBancos.length ? INF.juicioBancos.length + (INF.juicioBancos.length === 1 ? ' banco informó juicio' : ' bancos informaron juicio') : ''}${INF.juicioBancos.length && INF.juicioCheques.length ? ' · ' : ''}${INF.juicioCheques.length ? INF.juicioCheques.length + ' cheques en juicio' : ''}` : 'Ningún banco informó juicio')}
+    ${tile('juicios', nJ ? 'var(--rojo)' : 'var(--ok)', ICO.juicio, 'Bancos en juicio', nJ ? `${INF.juicioBancos.length ? INF.juicioBancos.length + (INF.juicioBancos.length === 1 ? ' banco informó juicio' : ' bancos informaron juicio') : ''}${INF.juicioBancos.length && INF.juicioCheques.length ? ' · ' : ''}${INF.juicioCheques.length ? INF.juicioCheques.length + ' cheques en juicio' : ''}` : 'Ningún banco informó juicio')}
   </div>
   <div class="tarjeta">
     <div class="pie" style="margin-top:0">Situaciones: 1 Normal · 2 Riesgo bajo · 3 Riesgo medio · 4 Riesgo alto · 5 Irrecuperable · 6 Irrec. disp. técnica<br>Fuente: BCRA Central de Deudores${a.estado === 'ok' ? ' y ARCA' : ''} · consultado el ${INF.consultado}</div>
@@ -857,7 +857,7 @@ function htmlDetalleInforme(v) {
       <div class="i-barra"><i style="width:${p1}%;background:${colPct(p1)}"></i></div>
       <small class="i-grp-p" style="color:${colPct(p1)}">Pagó el ${p1} % de los cheques · el ${p2} % del monto</small></div>`; };
     const G = grupo(L), pc = pctDe(G.pn, G.n), pm = pctDe(G.pm, G.m);
-    const rec = k.franjas.slice(0, 3).reduce((s, f) => s + f.cs.length, 0), vie = L.length - rec, maxF = Math.max(1, ...k.franjas.map(f => f.cs.length));
+    const rec = k.franjas.slice(0, 4).reduce((s, f) => s + f.cs.length, 0), vie = L.length - rec, maxF = Math.max(1, ...k.franjas.map(f => f.cs.length));
     return `<div class="estado mal" style="margin-top:0;margin-bottom:10px">✖ ${L.length} cheques · ${plata(k.tot)}<small>Levantados ${k.pag.length} (${plata(k.totPag)}) · sin pagar ${k.imp.length} (${plata(k.totImp)})</small></div>
       <div class="i-tarj"><div class="i-tit">Por motivo</div><div class="i-motivos">${k.motivos.map((x, i) => `<div><span><i class="i-punto" style="background:${i ? COLSIT[2] : COLSIT[4]}"></i>${esc(x.m.charAt(0) + x.m.slice(1).toLowerCase())}<em>${x.cs.length} cheques</em></span><b>${plata(sumaMonto(x.cs))}</b></div>`).join('')}</div></div>
       <div>${tile('abrir:chqres', 'var(--azul)', ICO.barras, 'Resumen de cheques', `Pagó ${G.pn} de ${G.n} (${pc} %) · ${ABIERTO.chqres ? 'tocar para cerrar' : 'tocar para ver'}`, !!ABIERTO.chqres)}
@@ -876,7 +876,7 @@ function htmlDetalleInforme(v) {
         ${k.franjas.map(f => { const imp = f.cs.filter(c => !c.pago).length; return `<div class="i-fr"><div class="i-fila"><b>${f.t}</b><span class="i-gris" style="font-size:12px">${f.de}</span></div>
           <div class="i-fr-bar"><div class="i-barra" style="height:10px"><i style="width:${f.cs.length / maxF * 100}%;background:${imp ? COLSIT[4] : COLSIT[1]}"></i></div><b>${f.cs.length}</b></div>
           ${f.cs.length ? `<small>${f.cs.length} ${f.cs.length === 1 ? 'cheque rechazado' : 'cheques rechazados'} · ${plata(sumaMonto(f.cs))} · ${imp ? `<span style="color:var(--rojo)">${imp} sin pagar</span>` : '<span style="color:var(--ok)">todos pagados</span>'}</small>
-          ${f.cs.map(c => `<div class="i-fr-ch"><span><b>Cheque ${esc(c.nro)} · ${plata(c.monto)}</b><br>${fecha(c.rechazo)} · hace ${diasDesde(c.rechazo)} días</span><span class="i-pill ${c.pago ? 'v' : 'r'}">${c.pago ? 'PAGÓ' : 'SIN PAGAR'}</span></div>`).join('')}` : '<small>Ningún cheque rechazado en esta franja</small>'}</div>`; }).join('')}
+          ` : '<small>Ningún cheque rechazado en esta franja</small>'}</div>`; }).join('')}
         <div class="i-signif ${rec > vie ? 'mal' : 'ojo'}">${rec > vie ? `<b>Problemas recientes:</b> ${rec} de los ${L.length} rechazos son de los últimos 6 meses.` : `<b>Problemas más viejos:</b> ${vie} de los ${L.length} rechazos tienen más de 6 meses${k.franjas[0].cs.length ? '' : ', y en el último mes no tuvo ninguno'}.`}</div></div>` : ''}</div>
       <div style="margin-top:10px">${tile('abrir:todos', 'var(--azul)', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 14h5M15 11h3M15 14h3"/></svg>', 'Detalle de todos los cheques', `${L.length} cheques · ${ABIERTO.todos ? 'tocar para cerrar' : 'tocar para ver'}`, !!ABIERTO.todos)}
       ${ABIERTO.todos ? `<div class="i-tarj" style="margin-top:8px">${L.map(c => `<div class="i-cq"><div class="i-fila"><b>Cheque ${esc(c.nro)}</b><span class="i-monto">${plata(c.monto)}</span></div>
@@ -934,19 +934,10 @@ function htmlDetalleInforme(v) {
       <button class="btn sec" style="width:100%;margin-top:10px" data-iv="ir-arca">Ver la constancia completa</button></div>`;
   }
   if (v === 'juicios') {
-    const nombre = INF.nombre || '';
     return `<div class="i-tarj"><div class="i-tit">Bancos que lo llevaron a juicio</div>
         ${INF.juicioBancos.length ? INF.juicioBancos.map(n => `<div class="i-alerta" style="margin-bottom:4px">✖ ${esc(n)}</div>`).join('') + '<div class="i-nota" style="margin-top:2px">El banco informó la deuda en proceso judicial o en situación jurídica.</div>' : '<div class="i-limpio">✔ Ningún banco informó proceso judicial</div>'}
         ${INF.juicioCheques.length ? `<div class="i-alerta" style="margin-top:8px">✖ ${INF.juicioCheques.length} cheques rechazados en proceso judicial</div>` : ''}
-        <div class="i-nota"><b>Fuente:</b> BCRA · Central de Deudores (lo informa cada banco).</div></div>
-      <div class="i-tarj"><div class="i-tit">Quiebras y concursos</div>
-        <div class="i-nota" style="margin-top:0">El Boletín Oficial pide un código de seguridad, así que esta búsqueda se hace en su página. Al tocar el botón se copia ${nombre ? 'el nombre' : 'el CUIT'} para pegarlo en el buscador.</div>
-        <button class="btn sec" style="width:100%;margin-top:8px" data-abrir="https://www.boletinoficial.gob.ar/" data-copia="${esc(nombre || fmtCuit(INF.cuit))}">Buscar en el Boletín Oficial</button>
-        <div class="i-nota"><b>Fuente:</b> Boletín Oficial de la República Argentina · edictos judiciales.</div></div>
-      <div class="i-tarj"><div class="i-tit">Facturas apócrifas</div>
-        <div class="i-nota" style="margin-top:0">ARCA pide un código de seguridad, así que la consulta se hace en su página. Al tocar el botón se copia el CUIT para pegarlo.</div>
-        <button class="btn sec" style="width:100%;margin-top:8px" data-abrir="https://servicioscf.afip.gob.ar/Facturacion/facturasApocrifas/default.aspx" data-copia="${INF.cuit}">Consultar en ARCA</button>
-        <div class="i-nota"><b>Fuente:</b> ARCA · base de facturas apócrifas.</div></div>`;
+        <div class="i-nota"><b>Fuente:</b> BCRA · Central de Deudores (lo informa cada banco).</div></div>`;
   }
   return '';
 }
@@ -989,7 +980,7 @@ function htmlPdfInforme() {
         ${(() => { const s = INF.serie, m = Math.ceil(s.length / 2); return Array.from({ length: m }, (_, j) => [s[j], s[j + m]].map(x => x ? `<td>${periodo(x.p)}</td><td class="n">${plata(x.total)}</td><td class="n">${chip(x.s)}</td>` : '<td></td><td></td><td></td>').join('')).map(x => `<tr>${x}</tr>`).join(''); })()}</tbody></table>` : ''}
       <h4>Semáforo: cómo se calculó</h4><table><tbody><tr><td>Arranca con</td><td class="n">100</td></tr>${P.f.map(x => `<tr><td>${x[0]}</td><td class="n">${x[1] < 0 ? x[1] : 0}</td></tr>`).join('')}<tr><th>Puntaje</th><th class="n">${P.p} / 100</th></tr></tbody></table>
       ${a.estado === 'ok' ? `<h4>Datos de ARCA</h4><table><tbody>${[['Estado', a.d.estado], ['Tipo', a.d.tipo], ['IVA', a.d.iva], ['Ganancias', a.d.ganancias], ['Empleador', a.d.empleador], ['Inscripto desde', a.d.desde], ['Domicilio fiscal', a.d.domicilio], ...a.d.acts.map((x, i) => [i ? '' : `Actividades (${a.d.acts.length})`, `${x.cod} · ${x.d}${x.principal ? ' (principal)' : ''}${x.desde ? ' · desde ' + x.desde : ''}`])].filter(x => x[1]).map(x => `<tr><td>${x[0]}</td><td>${esc(x[1])}</td></tr>`).join('')}</tbody></table>` : ''}
-      <h4>Juicios y antecedentes</h4><table><tbody>
+      <h4>Bancos en juicio (BCRA)</h4><table><tbody>
         <tr><td>Bancos que lo llevaron a juicio (BCRA)</td><td style="font-weight:700;color:${INF.juicioBancos.length ? '#B22222' : '#1E7A46'}">${INF.juicioBancos.length ? esc(INF.juicioBancos.join(', ')) : 'Ninguno'}</td></tr>
         <tr><td>Cheques rechazados en proceso judicial</td><td style="font-weight:700">${INF.juicioCheques.length || 'Ninguno'}</td></tr></tbody></table>
       <p style="color:#6B7280;margin-top:12px">Fuentes: BCRA (Central de Deudores y cheques rechazados)${a.estado === 'ok' ? ' y ARCA (padrón)' : ''}. Consultado el ${INF.consultado}. El semáforo lo calcula la app y no reemplaza un informe comercial.</p>
