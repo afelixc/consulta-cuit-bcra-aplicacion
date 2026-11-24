@@ -4,7 +4,9 @@ android {
     namespace = "ar.afelixc.consultacuit"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "ar.afelixc.consultacuit"
+        // Nombre interno: el APK de GitHub sigue con el de siempre; la versión de Play Store usa
+        // aplicaciones.afc.investicuit (lo pasa GitHub en ID_APP al armar el .aab)
+        applicationId System.getenv("ID_APP") ?: "ar.afelixc.consultacuit"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // En GitHub cada compilación sube el número, así el teléfono acepta la actualización

@@ -60,7 +60,8 @@ jobs:
           ./gradlew assembleRelease --no-daemon
           cp app/build/outputs/apk/release/app-release.apk ../INVESTI-CUIT.apk
 
-      # Archivo para Play Store (.aab). Google no permite que la app se actualice sola:
+      # Archivo para Play Store (.aab), con el nombre interno aplicaciones.afc.investicuit.
+      # Google no permite que la app se actualice sola:
       # se saca el permiso de instalar y se marca la app para que no busque versiones en GitHub
       - name: Compilar para Play Store
         if: env.FIRMA_ARCHIVO != ''
@@ -68,6 +69,7 @@ jobs:
         env:
           FIRMA_CLAVE: ${{ secrets.FIRMA_CLAVE }}
           NUMERO_VERSION: ${{ github.run_number }}
+          ID_APP: aplicaciones.afc.investicuit
         run: |
           sed -i '/android.permission.REQUEST_INSTALL_PACKAGES/d' app/src/main/AndroidManifest.xml
           node -e "const fs=require('fs'),f='app/src/main/assets/capacitor.config.json',c=JSON.parse(fs.readFileSync(f));c.android=Object.assign(c.android||{},{appendUserAgent:'InvestiPlay'});fs.writeFileSync(f,JSON.stringify(c,null,2))"

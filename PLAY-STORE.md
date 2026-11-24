@@ -2,7 +2,8 @@
 
 ## Datos de la app
 - **Nombre:** INVESTI-CUIT
-- **Nombre interno (no se cambia nunca):** ar.afelixc.consultacuit
+- **Nombre interno (no se cambia nunca):** aplicaciones.afc.investicuit (el APK de GitHub sigue con ar.afelixc.consultacuit)
+- **Pasar datos de la app vieja:** en la vieja Guardados › «Hacer copia»; en la nueva Guardados › «Restaurar»
 - **Idioma:** Español (Latinoamérica) – es-419
 - **Tipo:** Aplicación · **Categoría:** Finanzas · **Gratis**
 - **Política de privacidad:** https://afelixc.github.io/consulta-cuit-bcra-aplicacion/privacidad.html
