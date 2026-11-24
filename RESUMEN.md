@@ -1,5 +1,5 @@
 # Resumen de sesión
-_Última actualización: 2026-11-24 (tarde, PC laburo)_
+_Última actualización: 2026-11-24 (noche, PC casa)_
 
 ## Objetivo
 Publicar la app Android **INVESTI-CUIT** en Google Play Store, **pública y gratis**. Ahora: el usuario está cargando la app en Play Console (prueba cerrada).
@@ -31,14 +31,14 @@ Publicar la app Android **INVESTI-CUIT** en Google Play Store, **pública y grat
 - Explicado: prueba cerrada ≥12 testers × 14 días seguidos (cuenta desde que hay 12 anotados), una vez por app; testers deben unirse por link e instalar desde Play.
 
 ## En curso / Problemas abiertos
-- App INVESTI-CUIT CREADA en Play Console (cuenta "Alejandro Felix Cardenas").
-- HECHO y guardado: ficha (textos, ícono, gráfico 1024x500, 5 capturas), categoría Finanzas, mail de contacto aplicaciones.afc@gmail.com (sin teléfono), Contenido de la app: Política de privacidad, Anuncios (No), Detalles de acceso (sin restricciones), ID de publicidad (No), Apps gubernamentales (No), Funciones financieras ("Informes y control de crédito", sin documentación).
-- FALTA en Contenido de la app: Apps de salud (No), Estado de comerciante UE (no comerciante), Público objetivo (18+), Seguridad de los datos (SÍ recopila: "Otra información financiera" = CUIT y datos de cheque que se mandan a BCRA/ARCA; no se comparte; cifrado; obligatorio; sin servidor propio; la foto del cheque NO sale del teléfono), Clasificación del contenido (mail aplicaciones.afc@gmail.com, "El resto de los tipos de app", No a todo) -> antes de aceptar las Condiciones de IARC pedir OK al usuario.
-- Más adelante la app pedirá mail, teléfono y otros datos: actualizar Seguridad de los datos en esa versión.
-- Imágenes copiadas en D: - CLAUDE HP LABURO\INVESTI-CUIT Play Store (PC laburo).
+- 24/11: Contenido de la app completo (público 18+, seguridad de datos, IARC). Prueba cerrada "Alpha": Argentina, lista "Probadores" (solo aplicaciones.afc@gmail.com), comentarios a aplicaciones.afc@gmail.com.
+- **Rechazo de Google (v52):** "Play Console Requirements": declarar "Informes y control de crédito" exige cuenta de organización (D-U-N-S). La ayuda de Play Console (asistente IA, antes de crear el ticket) recomendó declarar "Mi app no ofrece ninguna función financiera" si la app solo muestra datos públicos. No se mandó ticket/apelación.
+- **Arreglo:** la versión Play NO tiene semáforo de riesgo (`SIN_PUNTAJE` en `www/index.html`: se activa con el user agent `InvestiPlay` del `.aab` o con `CONFIG_APP.sinPuntaje`; oculta tarjeta, pantalla y partes del PDF). El APK de GitHub sigue con semáforo. Funciones financieras = ninguna. Descripción de la ficha sin semáforo; captura del semáforo sacada (`play-store/no-usar/`). Ficha con "No etiquetar recursos" de IA.
+- **v1.9.53 enviada a revisión el 24/11 a la noche** (prueba cerrada). Esperar respuesta (hasta 7 días). Si la vuelven a rechazar por lo mismo: cuenta de organización.
+- Windows (afelixc/consulta-cuit-bcra-windows): no se copió este cambio (no hace falta, allá no hay Play Store). Las dos `www/` quedan distintas solo en `SIN_PUNTAJE`.
 
 ## Próximos pasos
-1. Guiarlo con capturas: ficha (textos + imágenes), Configuración de la tienda (Finanzas), Contenido de la app.
-2. Prueba cerrada: país Argentina, lista "Probadores" con los mails, subir `.aab`, enviar a revisión; pasar el link a testers.
-3. Sumar mails hasta ≥12; a los 14 días, "Solicitar acceso a producción" (preparar respuestas).
-4. Si Google rechaza algo: corregir, subir versión y armar `.aab` nuevo.
+1. Esperar la aprobación de Google.
+2. Sumar testers a "Probadores" (hacen falta ≥12 durante 14 días seguidos) y pasarles el link de la pestaña Verificadores.
+3. A los 14 días: "Solicitar acceso a producción".
+4. Si se agregan funciones nuevas: no meter puntajes ni recomendaciones de crédito en la versión Play.
