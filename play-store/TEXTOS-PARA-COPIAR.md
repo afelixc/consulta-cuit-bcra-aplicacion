@@ -13,12 +13,12 @@
 Informe de deudas y cheques rechazados por CUIT con datos públicos del BCRA.
 
 ## Descripción completa
-INVESTI-CUIT te muestra en segundos la situación financiera de una persona o empresa a partir de su CUIT, con datos públicos del Banco Central.
+(Sin semáforo de riesgo: la versión de Play Store no lo tiene, para no entrar en "informes de crédito". Ver RESUMEN.md.)
+INVESTI-CUIT te muestra en segundos lo que el Banco Central publica sobre un CUIT: deudas informadas por los bancos y cheques rechazados.
 
 QUÉ PODÉS VER
 • Situación en cada banco y deuda mes a mes, con gráficos.
 • Cheques rechazados: cuántos hay, cuántos se pagaron, por qué motivo y cuándo.
-• Semáforo de riesgo del 0 al 100, explicado en palabras simples.
 • Un resumen fácil de leer y un PDF completo para guardar o compartir.
 
 CHEQUES DENUNCIADOS

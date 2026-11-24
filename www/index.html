@@ -656,6 +656,8 @@ function guardarCuit() {
 
 // ---------- Informe por CUIT (versión 1.5): ventanitas, detalle y PDF ----------
 const VERSION_APP = '1.9';
+// Versión de Play Store (o CONFIG_APP.sinPuntaje): sin semáforo de riesgo, para que Google no la tome como "informes de crédito"
+const SIN_PUNTAJE = !!window.CONFIG_APP?.sinPuntaje || /InvestiPlay/.test(navigator.userAgent);
 let INF = null, VISTA_INF = 'inicio', ABIERTO = {};
 const COLSIT = ['#9AA3AE', '#2E9E5B', '#E5B01E', '#EF7A1A', '#E0482B', '#B71C1C', '#7F1010'];
 const colSit = s => COLSIT[Math.min(6, Math.max(0, +s || 0))];
@@ -837,7 +839,7 @@ function htmlInicioInforme() {
     <div>${tile('abrir:resumen', 'var(--azul)', ICO.lista, 'Resumen', ABIERTO.resumen ? 'Tocar para cerrar' : 'Tocar para leer el resumen', !!ABIERTO.resumen)}
       ${ABIERTO.resumen ? `<div class="i-res"><ul>${resumenInforme().map(x => `<li>${x}</li>`).join('')}</ul></div>` : ''}</div>
     ${tile('bancos', INF.per ? colSit(INF.peor) : COLSIT[1], ICO.banco, INF.per ? `Situación en bancos: ${INF.peor}` : 'Situación en bancos', INF.per ? `${SITUACIONES[INF.peor].split(' /')[0]} · debe ${plata(INF.deudaTotal)} en ${INF.bancosHoy.length} ${INF.bancosHoy.length === 1 ? 'entidad' : 'entidades'}` : 'No registra deudas')}
-    ${tile('riesgo', P.nivel[1], ICO.riesgo, `${P.nivel[0]} · ${P.p}/100`, a.estado === 'ok' ? 'Semáforo calculado con BCRA y ARCA' : 'Semáforo calculado con datos del BCRA')}
+    ${SIN_PUNTAJE ? '' : tile('riesgo', P.nivel[1], ICO.riesgo, `${P.nivel[0]} · ${P.p}/100`, a.estado === 'ok' ? 'Semáforo calculado con BCRA y ARCA' : 'Semáforo calculado con datos del BCRA')}
     ${INF.serie.length ? tile('deuda', 'var(--azul)', ICO.grafico, 'Deuda total mes a mes', `${INF.serie.length} meses${v !== null ? ` · ${v >= 0 ? 'subió' : 'bajó'} ${Math.abs(v)} % en el último año` : ''}`) : ''}
     ${tile('arca', 'var(--violeta)', ICO.arca, 'Datos de ARCA', subArca)}
     ${tile('juicios', nJ ? 'var(--rojo)' : 'var(--ok)', ICO.juicio, 'Bancos en juicio', nJ ? `${INF.juicioBancos.length ? INF.juicioBancos.length + (INF.juicioBancos.length === 1 ? ' banco informó juicio' : ' bancos informaron juicio') : ''}${INF.juicioBancos.length && INF.juicioCheques.length ? ' · ' : ''}${INF.juicioCheques.length ? INF.juicioCheques.length + ' cheques en juicio' : ''}` : 'Ningún banco informó juicio')}
@@ -907,6 +909,7 @@ function htmlDetalleInforme(v) {
         <div class="i-nota"><b>Fuente:</b> BCRA · Central de Deudores. Los montos los informa cada banco.</div></div>`;
   }
   if (v === 'riesgo') {
+    if (SIN_PUNTAJE) return '';
     const P = puntajeInforme();
     return `<div class="i-tarj"><div class="i-sema">${dialSvg(P.p, P.nivel[1])}<div><b style="font-size:19px;color:${P.nivel[1]}">${P.nivel[0]}</b><div class="i-nota" style="margin:2px 0 0">${P.p} puntos de 100. Cuanto más alto, más confiable.</div></div></div>
       <div class="i-escala"><div class="franja"><i style="background:${COLSIT[4]}"></i><i style="background:${COLSIT[2]}"></i><i style="background:${COLSIT[1]}"></i></div><div class="marca" style="left:${Math.min(Math.max(P.p, 1), 99)}%"></div>
@@ -976,9 +979,9 @@ function htmlPdfInforme() {
         <tr><td>Multas del BCRA</td><td class="n">${k.multaPag} pagadas</td><td class="n">${k.multaImp} impagas</td></tr>
         <tr><td>Último rechazo</td><td class="n" colspan="2">${fecha(k.ult)} (hace ${diasDesde(k.ult)} días)</td></tr></tbody></table>
       <table style="margin-top:6px"><tr>${k.franjas.map(f => `<th style="text-align:center">${f.t}</th>`).join('')}</tr><tr>${k.franjas.map(f => `<td style="text-align:center;font-weight:800">${f.cs.length}</td>`).join('')}</tr></table>` : '<p>No registra cheques rechazados.</p>'}
-      <h4>Situación en bancos y semáforo</h4>
+      <h4>Situación en bancos${SIN_PUNTAJE ? '' : ' y semáforo'}</h4>
       ${INF.per ? `<table><tbody>${sitHoy.map((m, s) => s && m ? `<tr><td>${chip(s)} ${SITUACIONES[s].split(' /')[0]}</td><td class="n">${plata(m)}</td></tr>` : '').join('')}<tr><th>Deuda total (${periodo(INF.per.periodo)})</th><th class="n">${plata(INF.deudaTotal)}</th></tr></tbody></table>` : '<p>No registra deudas en bancos.</p>'}
-      <div style="margin-top:8px"><b style="color:${P.nivel[1]}">Semáforo: ${P.nivel[0]} (${P.p}/100).</b> ${P.nivel[3]}</div>
+      ${SIN_PUNTAJE ? '' : `<div style="margin-top:8px"><b style="color:${P.nivel[1]}">Semáforo: ${P.nivel[0]} (${P.p}/100).</b> ${P.nivel[3]}</div>`}
       ${INF.serie.length ? `<h4>Deuda últimos ${INF.serie.length} meses, por situación</h4>${graficoDeuda()}` : ''}
       ${tiene ? `<h4>Detalle de cheques rechazados</h4><table><thead><tr><th>N°</th><th>Rechazo</th><th>Banco · motivo</th><th class="n">Monto</th><th>Estado</th><th>Multa</th></tr></thead><tbody>
         ${L.map(c => `<tr><td>${esc(c.nro)}</td><td>${fecha(c.rechazo)}</td><td>${esc(etiquetaBanco(c.banco, c.cod))} · ${esc(c.causal.toLowerCase())}</td><td class="n">${plata(c.monto)}</td><td style="color:${c.pago ? '#1E7A46' : '#B22222'};font-weight:700">${c.pago ? 'Pagado ' + fecha(c.pago) : 'Sin pagar'}</td><td>${c.multa}</td></tr>`).join('')}</tbody></table>
@@ -988,12 +991,12 @@ function htmlPdfInforme() {
         ${INF.bancosHoy.map(b => `<tr><td>${esc(b.n)}</td><td class="n">${plata(b.m)}</td><td class="n">${chip(b.s)}</td><td>${[b.atraso ? b.atraso + ' días de atraso' : '', b.refi ? 'refinanciada' : '', b.juicio ? 'proceso judicial' : '', b.juridica ? 'situación jurídica' : '', b.h.length ? 'últimos meses: ' + b.h.join(' → ') : ''].filter(Boolean).join(' · ')}</td></tr>`).join('')}</tbody></table>` : ''}
       ${INF.serie.length ? `<h4>Mes a mes</h4><table><thead><tr><th>Mes</th><th class="n">Deuda</th><th class="n">Peor sit.</th><th>Mes</th><th class="n">Deuda</th><th class="n">Peor sit.</th></tr></thead><tbody>
         ${(() => { const s = INF.serie, m = Math.ceil(s.length / 2); return Array.from({ length: m }, (_, j) => [s[j], s[j + m]].map(x => x ? `<td>${periodo(x.p)}</td><td class="n">${plata(x.total)}</td><td class="n">${chip(x.s)}</td>` : '<td></td><td></td><td></td>').join('')).map(x => `<tr>${x}</tr>`).join(''); })()}</tbody></table>` : ''}
-      <h4>Semáforo: cómo se calculó</h4><table><tbody><tr><td>Arranca con</td><td class="n">100</td></tr>${P.f.map(x => `<tr><td>${x[0]}</td><td class="n">${x[1] < 0 ? x[1] : 0}</td></tr>`).join('')}<tr><th>Puntaje</th><th class="n">${P.p} / 100</th></tr></tbody></table>
+      ${SIN_PUNTAJE ? '' : `<h4>Semáforo: cómo se calculó</h4><table><tbody><tr><td>Arranca con</td><td class="n">100</td></tr>${P.f.map(x => `<tr><td>${x[0]}</td><td class="n">${x[1] < 0 ? x[1] : 0}</td></tr>`).join('')}<tr><th>Puntaje</th><th class="n">${P.p} / 100</th></tr></tbody></table>`}
       ${a.estado === 'ok' ? `<h4>Datos de ARCA</h4><table><tbody>${[['Estado', a.d.estado], ['Tipo', a.d.tipo], ['IVA', a.d.iva], ['Ganancias', a.d.ganancias], ['Empleador', a.d.empleador], ['Inscripto desde', a.d.desde], ['Domicilio fiscal', a.d.domicilio], ...a.d.acts.map((x, i) => [i ? '' : `Actividades (${a.d.acts.length})`, `${x.cod} · ${x.d}${x.principal ? ' (principal)' : ''}${x.desde ? ' · desde ' + x.desde : ''}`])].filter(x => x[1]).map(x => `<tr><td>${x[0]}</td><td>${esc(x[1])}</td></tr>`).join('')}</tbody></table>` : ''}
       <h4>Bancos en juicio (BCRA)</h4><table><tbody>
         <tr><td>Bancos que lo llevaron a juicio (BCRA)</td><td style="font-weight:700;color:${INF.juicioBancos.length ? '#B22222' : '#1E7A46'}">${INF.juicioBancos.length ? esc(INF.juicioBancos.join(', ')) : 'Ninguno'}</td></tr>
         <tr><td>Cheques rechazados en proceso judicial</td><td style="font-weight:700">${INF.juicioCheques.length || 'Ninguno'}</td></tr></tbody></table>
-      <p style="color:#6B7280;margin-top:12px">Fuentes: BCRA (Central de Deudores y cheques rechazados)${a.estado === 'ok' ? ' y ARCA (padrón)' : ''}. Consultado el ${INF.consultado}. El semáforo lo calcula la app y no reemplaza un informe comercial.</p>
+      <p style="color:#6B7280;margin-top:12px">Fuentes: BCRA (Central de Deudores y cheques rechazados)${a.estado === 'ok' ? ' y ARCA (padrón)' : ''}. Consultado el ${INF.consultado}.${SIN_PUNTAJE ? '' : ' El semáforo lo calcula la app y no reemplaza un informe comercial.'}</p>
     </div></div>`;
 }
 

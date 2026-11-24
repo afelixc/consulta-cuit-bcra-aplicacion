@@ -18,7 +18,7 @@ Menú de la izquierda: **Crecimiento › Presencia en Play Store › Ficha de Pl
 1. Descripción breve y descripción completa: copiarlas de `TEXTOS-PARA-COPIAR.md`.
 2. Ícono de la app: `icono-512.png`
 3. Gráfico de funciones: `imagen-1024x500.png`
-4. Capturas de pantalla del teléfono: `captura-1.png` a `captura-5.png`
+4. Capturas de pantalla del teléfono: `captura-1.png`, `captura-3.png`, `captura-4.png` y `captura-5.png` (la del semáforo está en `no-usar/`: la versión Play no lo tiene)
 5. Tocá **Guardar**.
 
 En **Configuración de la tienda** (mismo menú): Categoría **Finanzas** y tu mail de contacto. **Guardar**.
