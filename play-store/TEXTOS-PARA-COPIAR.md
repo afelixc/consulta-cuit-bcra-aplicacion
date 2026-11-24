@@ -6,7 +6,7 @@
 - **Pasar datos de la app vieja:** en la vieja Guardados › «Hacer copia»; en la nueva Guardados › «Restaurar»
 - **Idioma:** Español (Latinoamérica) – es-419
 - **Tipo:** Aplicación · **Categoría:** Finanzas · **Gratis**
-- **Política de privacidad:** https://afelixc.github.io/consulta-cuit-bcra-aplicacion/privacidad.html
+- **Política de privacidad:** https://github.com/afelixc/consulta-cuit-bcra-aplicacion/blob/main/docs/PRIVACIDAD.md
 - **Archivo a subir:** `INVESTI-CUIT-PlayStore.aab` (sale en cada release de GitHub)
 
 ## Descripción breve (máximo 80 letras)
@@ -40,7 +40,7 @@ INVESTI-CUIT no es una aplicación oficial y no pertenece ni está asociada al B
 • Padrón de ARCA: https://www.afip.gob.ar
 
 ## Respuestas para "Contenido de la app"
-- **Política de privacidad:** el link de arriba.
+- **Política de privacidad:** https://github.com/afelixc/consulta-cuit-bcra-aplicacion/blob/main/docs/PRIVACIDAD.md
 - **Anuncios:** No, la app no tiene anuncios.
 - **Acceso a la app:** Toda la funcionalidad está disponible sin restricciones (no hay usuario ni contraseña).
 - **Clasificación de contenido:** categoría "Utilidad, productividad, comunicación u otro"; responder No a todo (violencia, sexo, apuestas, etc.).

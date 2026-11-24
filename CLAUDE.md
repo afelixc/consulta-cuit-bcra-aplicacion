@@ -17,4 +17,4 @@ La carpeta `www/` (la pantalla y todas sus funciones) es **idéntica** en los do
 - **Versión que ve el usuario (1.5, 1.6…):** cuando el usuario pide una versión nueva, cambiar el archivo `VERSION` (raíz) y la constante `VERSION_APP` en `www/index.html`. Las dos tienen que decir lo mismo.
 - Respaldo de la versión anterior a la 1.5: rama `respaldo-v1.0.46` y el release v1.0.46.
 - Los datos del usuario (guardados, certificado de ARCA) están en `localStorage` del teléfono: no cambiar el `appId` ni la firma, o se pierden al actualizar.
-- **Play Store:** el `.aab` se arma con el nombre interno `aplicaciones.afc.investicuit` (variable `ID_APP` en el workflow) y sin auto-actualizar. El APK de GitHub sigue con `ar.afelixc.consultacuit`. Textos de la ficha en `PLAY-STORE.md`.
+- **Play Store:** el `.aab` se arma con el nombre interno `aplicaciones.afc.investicuit` (variable `ID_APP` en el workflow) y sin auto-actualizar. El APK de GitHub sigue con `ar.afelixc.consultacuit`. Textos, imágenes y paso a paso en `play-store/`.
