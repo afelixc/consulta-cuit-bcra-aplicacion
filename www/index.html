@@ -655,7 +655,7 @@ function guardarCuit() {
 
 
 // ---------- Informe por CUIT (versión 1.5): ventanitas, detalle y PDF ----------
-const VERSION_APP = '1.8';
+const VERSION_APP = '1.9';
 let INF = null, VISTA_INF = 'inicio', ABIERTO = {};
 const COLSIT = ['#9AA3AE', '#2E9E5B', '#E5B01E', '#EF7A1A', '#E0482B', '#B71C1C', '#7F1010'];
 const colSit = s => COLSIT[Math.min(6, Math.max(0, +s || 0))];
@@ -2181,6 +2181,8 @@ async function buscarActualizacion() {
     if (!app) return;
     const { build } = await app.getInfo();
     $('verApp').textContent = ' · Versión ' + VERSION_APP;
+    // La versión de Play Store se actualiza sola desde Play: ahí no se busca en GitHub
+    if (window.CONFIG_APP?.sinActualizar || /InvestiPlay/.test(navigator.userAgent)) return;
     const r = await fetch(`https://api.github.com/repos/${REPO_APP}/releases/latest`, { cache: 'no-store' });
     if (!r.ok) return;
     const ultima = await r.json();

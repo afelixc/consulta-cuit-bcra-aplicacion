@@ -60,6 +60,20 @@ jobs:
           ./gradlew assembleRelease --no-daemon
           cp app/build/outputs/apk/release/app-release.apk ../INVESTI-CUIT.apk
 
+      # Archivo para Play Store (.aab). Google no permite que la app se actualice sola:
+      # se saca el permiso de instalar y se marca la app para que no busque versiones en GitHub
+      - name: Compilar para Play Store
+        if: env.FIRMA_ARCHIVO != ''
+        working-directory: android
+        env:
+          FIRMA_CLAVE: ${{ secrets.FIRMA_CLAVE }}
+          NUMERO_VERSION: ${{ github.run_number }}
+        run: |
+          sed -i '/android.permission.REQUEST_INSTALL_PACKAGES/d' app/src/main/AndroidManifest.xml
+          node -e "const fs=require('fs'),f='app/src/main/assets/capacitor.config.json',c=JSON.parse(fs.readFileSync(f));c.android=Object.assign(c.android||{},{appendUserAgent:'InvestiPlay'});fs.writeFileSync(f,JSON.stringify(c,null,2))"
+          ./gradlew bundleRelease --no-daemon
+          cp app/build/outputs/bundle/release/app-release.aab ../INVESTI-CUIT-PlayStore.aab
+
       # Sin la firma definitiva el APK queda solo como prueba (en la pestaña Actions), no se publica
       - name: Guardar APK de prueba
         if: env.FIRMA_ARCHIVO == ''
@@ -75,6 +89,6 @@ jobs:
         run: |
           VERSION=$(tr -d ' \r\n' < VERSION)
           # El número del final (compilación) es el que usa la app para saber si hay una versión nueva
-          gh release create "v$VERSION.${{ github.run_number }}" INVESTI-CUIT.apk \
+          gh release create "v$VERSION.${{ github.run_number }}" INVESTI-CUIT.apk INVESTI-CUIT-PlayStore.aab \
             --title "INVESTI-CUIT $VERSION (compilación ${{ github.run_number }})" \
-            --notes "Descargá **INVESTI-CUIT.apk** desde el teléfono y abrilo para instalar."
+            --notes "Descargá **INVESTI-CUIT.apk** desde el teléfono y abrilo para instalar. (El archivo .aab es solo para subir a Play Store.)"

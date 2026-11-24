@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>INVESTI-CUIT · Política de privacidad</title>
+<style>
+  :root { --fondo: #F4F7FB; --texto: #1B2430; --suave: #5A6678; --azul: #1F4E8C; --tarjeta: #FFFFFF; --borde: #DCE3EC; }
+  @media (prefers-color-scheme: dark) {
+    :root { --fondo: #10161F; --texto: #E6ECF3; --suave: #9AA7B8; --azul: #7FAEEA; --tarjeta: #18212D; --borde: #2A3646; }
+  }
+  body { margin: 0; background: var(--fondo); color: var(--texto); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 720px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { color: var(--azul); font-size: 26px; margin: 0 0 4px; }
+  h2 { color: var(--azul); font-size: 19px; margin: 28px 0 8px; }
+  .fecha { color: var(--suave); margin: 0 0 20px; }
+  .aviso { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 12px; padding: 14px 16px; }
+  ul { padding-left: 22px; }
+  li { margin: 6px 0; }
+  a { color: var(--azul); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Política de privacidad de INVESTI-CUIT</h1>
+  <p class="fecha">Última actualización: 24 de noviembre de 2026</p>
+
+  <p class="aviso"><strong>INVESTI-CUIT no es una aplicación oficial.</strong> No pertenece ni está asociada al Banco Central de la República Argentina (BCRA), a ARCA (ex AFIP) ni a ningún organismo del Estado. Solo muestra, ordenada, información pública que esos organismos publican.</p>
+
+  <h2>Qué datos usa la app</h2>
+  <ul>
+    <li><strong>Los CUIT y cheques que vos escribís o fotografiás.</strong> Se envían solamente a los servicios públicos del BCRA (api.bcra.gob.ar) y, si lo configurás, a los de ARCA (afip.gov.ar), para traer el informe.</li>
+    <li><strong>La cámara.</strong> Se usa solo cuando tocás el botón para leer un cheque. La foto se procesa dentro del teléfono y no se guarda ni se envía a ningún lado.</li>
+    <li><strong>Tu certificado de ARCA (opcional).</strong> Si lo cargás, queda guardado solamente en tu teléfono y se usa únicamente para consultar los datos de ARCA.</li>
+    <li><strong>Tus consultas guardadas.</strong> Quedan solamente en tu teléfono.</li>
+  </ul>
+
+  <h2>Qué NO hace la app</h2>
+  <ul>
+    <li>No tiene servidores propios: no recibimos, no guardamos y no vemos tus datos.</li>
+    <li>No pide registrarse ni crear una cuenta.</li>
+    <li>No tiene publicidad ni herramientas de seguimiento o estadísticas.</li>
+    <li>No vende ni comparte datos con nadie.</li>
+  </ul>
+
+  <h2>Servicios de terceros</h2>
+  <p>Para leer el texto de los cheques la app usa el lector de texto de Google (ML Kit) que trabaja dentro del teléfono. Las consultas van directo a los servicios públicos del BCRA y de ARCA, que tienen sus propias políticas.</p>
+
+  <h2>Cómo borrar tus datos</h2>
+  <p>Todo lo que guarda la app está en tu teléfono. Para borrarlo, desinstalá la app o andá a Ajustes del teléfono › Aplicaciones › INVESTI-CUIT › Almacenamiento › Borrar datos.</p>
+
+  <h2>Menores de edad</h2>
+  <p>La app está pensada para uso comercial y profesional. No está dirigida a menores de edad.</p>
+
+  <h2>Contacto</h2>
+  <p>Por consultas sobre esta política podés escribir desde la página del proyecto: <a href="https://github.com/afelixc/consulta-cuit-bcra-aplicacion/issues">github.com/afelixc/consulta-cuit-bcra-aplicacion</a>.</p>
+</main>
+</body>
+</html>
