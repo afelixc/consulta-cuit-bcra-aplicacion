@@ -1,5 +1,5 @@
 # Resumen de sesión
-_Última actualización: 2026-11-24_
+_Última actualización: 2026-11-24 (tarde, PC laburo)_
 
 ## Objetivo
 Publicar la app Android **INVESTI-CUIT** en Google Play Store, **pública y gratis**. Ahora: el usuario está cargando la app en Play Console (prueba cerrada).
@@ -31,8 +31,11 @@ Publicar la app Android **INVESTI-CUIT** en Google Play Store, **pública y grat
 - Explicado: prueba cerrada ≥12 testers × 14 días seguidos (cuenta desde que hay 12 anotados), una vez por app; testers deben unirse por link e instalar desde Play.
 
 ## En curso / Problemas abiertos
-- El usuario está en Play Console: ya puso el nombre de paquete; no encontraba dónde cargar las imágenes (Panel › Configurar ficha, o Aumentar usuarios › Presencia en Play Store › Fichas). Se le pidió una captura de pantalla.
-- Tiene 2 mails de testers; faltan ~10–12 más.
+- App INVESTI-CUIT CREADA en Play Console (cuenta "Alejandro Felix Cardenas").
+- HECHO y guardado: ficha (textos, ícono, gráfico 1024x500, 5 capturas), categoría Finanzas, mail de contacto aplicaciones.afc@gmail.com (sin teléfono), Contenido de la app: Política de privacidad, Anuncios (No), Detalles de acceso (sin restricciones), ID de publicidad (No), Apps gubernamentales (No), Funciones financieras ("Informes y control de crédito", sin documentación).
+- FALTA en Contenido de la app: Apps de salud (No), Estado de comerciante UE (no comerciante), Público objetivo (18+), Seguridad de los datos (SÍ recopila: "Otra información financiera" = CUIT y datos de cheque que se mandan a BCRA/ARCA; no se comparte; cifrado; obligatorio; sin servidor propio; la foto del cheque NO sale del teléfono), Clasificación del contenido (mail aplicaciones.afc@gmail.com, "El resto de los tipos de app", No a todo) -> antes de aceptar las Condiciones de IARC pedir OK al usuario.
+- Más adelante la app pedirá mail, teléfono y otros datos: actualizar Seguridad de los datos en esa versión.
+- Imágenes copiadas en D: - CLAUDE HP LABURO\INVESTI-CUIT Play Store (PC laburo).
 
 ## Próximos pasos
 1. Guiarlo con capturas: ficha (textos + imágenes), Configuración de la tienda (Finanzas), Contenido de la app.
